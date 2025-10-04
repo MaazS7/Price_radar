@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Searching Products - Please Wait</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+            padding: 2rem;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .progress-container {
+            margin: 30px 0;
+        }
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        .progress-bar {
+            height: 8px;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress {
+            height: 100%;
+            background-color: #3498db;
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+        .search-query {
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 10px 0;
+        }
+        #retryButton {
+            margin-top: 20px;
+            padding: 8px 16px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            display: none;
+        }
+        .error-message {
+            color: #e74c3c;
+            margin: 15px 0;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="loader"></div>
+        <h1>Searching for Products</h1>
+        
+        <div class="progress-container">
+            <div class="progress-text">
+                <span id="statusText">Initializing search...</span>
+                <span id="progressText">0%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress" id="progressBar"></div>
+            </div>
+        </div>
+        
+        <p class="search-query">
+            Searching for: <span id="searchQuery">{{ query }}</span>
+        </p>
+        
+        <div class="error-message" id="errorMessage"></div>
+        <button id="retryButton" onclick="window.location.reload()">Try Again</button>
+    </div>
+
+    <script>
+        // DOM elements
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        const statusText = document.getElementById('statusText');
+        const errorMessage = document.getElementById('errorMessage');
+        const retryButton = document.getElementById('retryButton');
+        const searchQuery = document.getElementById('searchQuery');
+        
+        // Animation variables
+        let progress = 0;
+        const maxProgress = 90;
+        let progressInterval;
+        let checkInterval;
+        let lastStatus = '';
+        
+        // Start progress animation
+        function startProgressAnimation() {
+            progressInterval = setInterval(() => {
+                if (progress < maxProgress) {
+                    progress += 1;
+                    updateProgress(progress);
+                }
+            }, 500);
+        }
+        
+        // Update progress display
+        function updateProgress(value) {
+            progressBar.style.width = `${value}%`;
+            progressText.textContent = `${value}%`;
+        }
+        
+        // Show error state
+        function showError(message) {
+            clearInterval(progressInterval);
+            clearInterval(checkInterval);
+            statusText.textContent = 'Search failed';
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            retryButton.style.display = 'inline-block';
+            updateProgress(100);
+        }
+        
+        // Check results from server
+        function checkStatus() {
+            const query = searchQuery.textContent.trim();
+            if (!query) return;
+            
+            fetch(`/check-scraping-status/?query=${encodeURIComponent(query)}`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Network error');
+                    return response.json();
+                })
+                .then(data => {
+                    // Update status if changed
+                    if (data.status !== lastStatus) {
+                        lastStatus = data.status;
+                        
+                        if (data.status === 'running') {
+                            statusText.textContent = data.current_spider 
+                                ? `Searching ${data.current_spider}...` 
+                                : 'Searching stores...';
+                        }
+                        else if (data.status === 'waiting') {
+                            statusText.textContent = `Waiting before next search...`;
+                        }
+                    }
+                    
+                    // Handle completion
+                    if (data.status === 'completed') {
+                        clearInterval(progressInterval);
+                        clearInterval(checkInterval);
+                        updateProgress(100);
+                        statusText.textContent = 'Search complete!';
+                        setTimeout(() => {
+                            window.location.href = `/search-product-view/?query=${encodeURIComponent(query)}`;
+                        }, 1000);
+                    } 
+                    else if (data.status === 'failed') {
+                        showError(data.message || 'Search failed');
+                    }
+                })
+                .catch(error => {
+                    console.error('Status check failed:', error);
+                    // Continue checking even if network error occurs
+                });
+        }
+        
+        // Start when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            startProgressAnimation();
+            checkStatus(); // Initial check
+            checkInterval = setInterval(checkStatus, 20000); // Check every 3 seconds
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Price Comparison</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .search-form {
+            display: flex;
+            gap: 10px;
+            margin: 40px 0;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            font-size: 16px;
+        }
+        button {
+            padding: 10px 20px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .error {
+            color: #e74c3c;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Price Radar</h1>
+    {% if error %}<div class="error">{{ error }}</div>{% endif %}
+    <form method="get" action="{% url 'get_products' %}" class="search-form">
+        <input type="text" name="query" placeholder="Search for products (e.g., Samsung Galaxy S23)" required>
+        <button type="submit">Search</button>
+    </form>
+</body>
+</html>

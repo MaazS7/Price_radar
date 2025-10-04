@@ -1,0 +1,16 @@
+# Ignore virtual environments
+venv/
+env/
+*.pyc
+__pycache__/
+db.sqlite3
+*.log
+*.sqlite3
+*.pyo
+*.pyd
+*.swp
+*.swo
+*.bak
+*.tmp
+*.idea/
+*.vscode/
