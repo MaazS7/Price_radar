@@ -13,6 +13,7 @@ class Product(models.Model):
     platform = models.CharField(max_length = 50)
     last_updated = models.DateTimeField(auto_now_add=True)
     category = models.CharField(max_length= 50)
+    sub_category = models.CharField(max_length= 50)
 
     class Meta:
         db_table = 'products'

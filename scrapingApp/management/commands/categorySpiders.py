@@ -27,14 +27,21 @@ class Command(BaseCommand):
         # query = kwargs['query']
 
         # Ensure Scrapy settings are loaded correctly
+
+        daraz_urls=[
+            # "https://www.daraz.pk/catalog/?from=hp_categories&page=20&q=Smart%20Phones&service=all_channel",
+            # "https://www.daraz.pk/catalog/?spm=a2a0e.searchlist.cate_5.10.44e02c3f9VJbIC&q=Laptops&from=hp_categories&src=all_channel",
+            "https://www.daraz.pk/catalog/?spm=a2a0e.searchlist.cate_2.9.1a2e762fRU9g5n&q=Televisions&from=hp_categories&src=all_channel",
+            "https://www.daraz.pk/catalog/?spm=a2a0e.pdp_revamp.cate_5.7.137a57f6CoqmIt&q=Smart%20Watches&from=hp_categories&src=all_channel",
+        ]
         
 
         self.stdout.write(self.style.SUCCESS(f"🚀 Running Scrapy for query:"))
 
         process = CrawlerProcess(get_project_settings())
-        # process.crawl(DarazScraper)
+        process.crawl(DarazScraper, urls= daraz_urls)
         # time.sleep(20)
-        process.crawl(ShophiveSpider)
+        # process.crawl(ShophiveSpider)
         # process.crawl(PriceOyeSpider)
         process.start(stop_after_crawl=True)
 

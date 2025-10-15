@@ -24,7 +24,7 @@ class MongoDBPipeline:
         return cls(
             mongo_uri=crawler.settings.get('MONGO_URI'),
             mongo_db=crawler.settings.get('MONGO_DATABASE'),
-            collection_name=crawler.settings.get('MONGO_COLLECTION', 'products'),
+            collection_name=crawler.settings.get('MONGO_COLLECTION', 'testing'),
         )
     
     

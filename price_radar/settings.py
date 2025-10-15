@@ -140,6 +140,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 client = MongoClient("mongodb+srv://priceradarpk:priceradar@priceradar.b6bkx.mongodb.net/?retryWrites=true&w=majority&appName=PriceRadar")
 db = client["priceradar"]
-products_collection = db["products"]
+products_collection = db["testing"]
 
 

@@ -120,6 +120,6 @@ ITEM_PIPELINES = {
 MONGO_URI = 'mongodb+srv://priceradarpk:priceradar@priceradar.b6bkx.mongodb.net/?retryWrites=true&w=majority&appName=PriceRadar'
 # MONGO_URI = "mongodb+srv://priceradarpk:5dBahH_pF5L4E59@priceradar.b6bkx.mongodb.net/priceradar?retryWrites=true&w=majority&ssl=true&ssl_cert_reqs=CERT_NONE"
 MONGO_DATABASE = 'priceradar'
-MONGO_COLLECTION = 'products'
+MONGO_COLLECTION = 'testing'
 
 

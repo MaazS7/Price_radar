@@ -138,21 +138,146 @@ def search_products(query):
 
     # return redirect("loading_view")
 
-def get_products(request):
-
+def getProductsBySearch(request):
     query = request.GET.get("query", "").strip()
-    print(query)
-    
-    products = list(products_collection.find({
-        "platform": {"$regex": f".*{query}.*", "$options": "i"}
-    }).limit(20)) 
+    page = int(request.GET.get("page", 1))  # Default to page 1
+    per_page = 20  # Number of products per page
 
-    # if products:
-    #     return render(request, "results.html", {'products': products})
-    
+    skip = (page - 1) * per_page
+
+    # MongoDB query with pagination
+    products_cursor = products_collection.find({
+        "platform": {"$regex": f".*{query}.*", "$options": "i"}
+    }).skip(skip).limit(per_page)
+
+    products = list(products_cursor)
+
     if products:
-        data = [{'title': prod.get("name"), 'original_price': prod.get("original_price"), 'current_price': prod.get("current_price"), 'previous_price': prod.get("previous_price"), 'category': prod.get("category"),'url': prod.get("url"), 'image_url': prod.get("image_url"), 'platform': prod.get("platform")} for prod in products]
-        return JsonResponse(data, safe=False)
+        data = [
+            {
+                'title': prod.get("name"),
+                'original_price': prod.get("original_price"),
+                'current_price': prod.get("current_price"),
+                'previous_price': prod.get("previous_price"),
+                'category': prod.get("category"),
+                'url': prod.get("url"),
+                'image_url': prod.get("image_url"),
+                'platform': prod.get("platform")
+            }
+            for prod in products
+        ]
+
+        # Get total count (for frontend to know how many pages exist)
+        total_count = products_collection.count_documents({
+            "platform": {"$regex": f".*{query}.*", "$options": "i"}
+        })
+
+        response = {
+            'products': data,
+            'total_count': total_count,
+            'current_page': page,
+            'per_page': per_page,
+            'total_pages': (total_count + per_page - 1) // per_page
+        }
+
+        return JsonResponse(response, safe=False)
+
+    else:
+        return HttpResponse("Product not present")
+    
+
+def getProductsByCategory(request):
+    query = request.GET.get("query", "").strip()
+    page = int(request.GET.get("page", 1))  # Default to page 1
+    per_page = 20  # Number of products per page
+
+    skip = (page - 1) * per_page
+
+    # MongoDB query with pagination
+    products_cursor = products_collection.find({
+        "category": {"$regex": f".*{query}.*", "$options": "i"}
+    }).skip(skip).limit(per_page)
+
+    products = list(products_cursor)
+
+    if products:
+        data = [
+            {
+                'title': prod.get("name"),
+                'original_price': prod.get("original_price"),
+                'current_price': prod.get("current_price"),
+                'previous_price': prod.get("previous_price"),
+                'category': prod.get("category"),
+                'url': prod.get("url"),
+                'image_url': prod.get("image_url"),
+                'platform': prod.get("platform")
+            }
+            for prod in products
+        ]
+
+        # Get total count (for frontend to know how many pages exist)
+        total_count = products_collection.count_documents({
+            "platform": {"$regex": f".*{query}.*", "$options": "i"}
+        })
+
+        response = {
+            'products': data,
+            'total_count': total_count,
+            'current_page': page,
+            'per_page': per_page,
+            'total_pages': (total_count + per_page - 1) // per_page
+        }
+
+        return JsonResponse(response, safe=False)
+
+    else:
+        return HttpResponse("Product not present")
+    
+
+def getProductsBySubCategory(request):
+    query = request.GET.get("query", "").strip()
+    page = int(request.GET.get("page", 1))  # Default to page 1
+    per_page = 20  # Number of products per page
+
+    skip = (page - 1) * per_page
+
+    # MongoDB query with pagination
+    products_cursor = products_collection.find({
+        "sub_category": {"$regex": f".*{query}.*", "$options": "i"}
+    }).skip(skip).limit(per_page)
+
+    products = list(products_cursor)
+
+    if products:
+        data = [
+            {
+                'title': prod.get("name"),
+                'original_price': prod.get("original_price"),
+                'current_price': prod.get("current_price"),
+                'previous_price': prod.get("previous_price"),
+                'category': prod.get("category"),
+                'url': prod.get("url"),
+                'image_url': prod.get("image_url"),
+                'platform': prod.get("platform")
+            }
+            for prod in products
+        ]
+
+        # Get total count (for frontend to know how many pages exist)
+        total_count = products_collection.count_documents({
+            "platform": {"$regex": f".*{query}.*", "$options": "i"}
+        })
+
+        response = {
+            'products': data,
+            'total_count': total_count,
+            'current_page': page,
+            'per_page': per_page,
+            'total_pages': (total_count + per_page - 1) // per_page
+        }
+
+        return JsonResponse(response, safe=False)
+
     else:
         return HttpResponse("Product not present")
 

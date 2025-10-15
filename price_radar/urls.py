@@ -30,8 +30,10 @@ urlpatterns = [
     # path('loading/', loading_view, name='loading_view'),
     path('results/', search_product_view),
     path('search-product-view/', search_product_view, name='search-product-view'),
-    path('get_products/', get_products, name='get_products'),
+    path('getProductsBySearch/', getProductsBySearch, name='getProductsBySearch'),
     path('test/', test, name='test'),
+    path('getProductsByCategory/', getProductsByCategory, name='getProductsByCategory'),
+    path('getProductsBySubCategory/', getProductsBySubCategory, name='getProductsBySubCategory'),
     # path('startSchedular/', startSchedular, name='startSchedular'),
     # path('get-scraped-data/', get_scraped_data_view, name='get-scraped-data'),
     # path('check-scraping-status/', check_scraping_status)

@@ -15,155 +15,145 @@ class DarazScraper(scrapy.Spider):
     name = "daraz_category"
     allowed_domains = ['daraz.pk']
 
-    def __init__(self, urls=None, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super(DarazScraper, self).__init__(*args, **kwargs)
+        self.start_urls = [f'https://www.daraz.pk/catalog/?spm=a2a0e.searchlist.cate_2.9.1a2e762fRU9g5n&q=Televisions&from=hp_categories&src=all_channel']
 
-        # Accept list or comma-separated URLs
-        if urls:
-            if isinstance(urls, str):
-                self.urls_to_scrape = [u.strip() for u in urls.split(',') if u.strip()]
-            else:
-                self.urls_to_scrape = urls
-        else:
-            print("no urls found for scraping")
-        # else:
-        #     self.urls_to_scrape = [
-        #         'https://www.daraz.pk/catalog/?spm=a2a0e.searchlist.cate_2.9.1a2e762fRU9g5n&q=Televisions'
-        #     ]
-
-        # Initialize Chrome only once
         chrome_options = Options()
-        # chrome_options.add_argument("--headless=new")
+        # chrome_options.add_argument("--headless")
         chrome_options.add_argument("--disable-blink-features=AutomationControlled")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--window-size=1680,1050")
-        chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                                    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
         service = Service()
         self.driver = webdriver.Chrome(service=service, options=chrome_options)
-
-    def start_requests(self):
-        """Start with the first URL in the list."""
-        for url in self.urls_to_scrape:
-
-            lower_url = url.lower()
-
-            if "television" in lower_url:
-                self.sub_category = "Televisions"
-            elif "phone" in lower_url:
-                self.sub_category = "Phones"
-            elif "laptop" in lower_url:
-                self.sub_category = "Laptops"
-
-            yield scrapy.Request(url=url, callback=self.parse_category, meta={'category_url': url})
+        self.driver.get(self.start_urls[0])
 
     def scroll_and_load_images(self):
         """Scroll through the page to trigger image loading"""
         last_height = self.driver.execute_script("return document.body.scrollHeight")
-        scroll_pause = random.uniform(0.5, 1.2)
-
+        scroll_pause = random.uniform(0.5, 1.5)
+        
+        # Scroll down gradually
         for i in range(0, last_height, 300):
             self.driver.execute_script(f"window.scrollTo(0, {i});")
             time.sleep(scroll_pause)
-
+        
+        # Final scroll to bottom
         self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        time.sleep(1.5)
+        time.sleep(2)
 
     def click_next_page(self):
-        """Click the 'next page' button."""
+        """Robust method to handle next page click with overlapping elements"""
         try:
-            next_button = WebDriverWait(self.driver, 5).until(
+            # Wait for next button to be present
+            next_button = WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, "li.ant-pagination-next button.ant-pagination-item-link"))
             )
-
-            li_element = self.driver.find_element(By.CSS_SELECTOR, "li.ant-pagination-next")
-            if "ant-pagination-disabled" in li_element.get_attribute("class"):
+            
+            # Check if button is enabled (not on last page)
+            if "ant-pagination-disabled" in self.driver.find_element(By.CSS_SELECTOR, "li.ant-pagination-next").get_attribute("class"):
+                self.logger.info("Reached last page")
                 return False
-
+            
+            # Try regular click first
             try:
                 next_button.click()
+                self.logger.info("Clicked next page using regular click")
+                return True
             except ElementClickInterceptedException:
+                # If intercepted, use JavaScript click
                 self.driver.execute_script("arguments[0].click();", next_button)
-
-            return True
-
+                self.logger.info("Clicked next page using JavaScript (element was intercepted)")
+                return True
+            except Exception as e:
+                self.logger.warning(f"Click failed, trying JavaScript: {e}")
+                self.driver.execute_script("arguments[0].click();", next_button)
+                return True
+                
         except TimeoutException:
+            self.logger.info("Next page button not found - probably last page")
             return False
-        except Exception:
+        except Exception as e:
+            self.logger.error(f"Error clicking next page: {e}")
             return False
 
-    def parse_category(self, response):
-        """Scrape each category (URL) fully before moving to the next."""
-        url = response.meta['category_url']
-        self.logger.info(f"🚀 Starting category: {url}")
-
-        try:
-            self.driver.get(url)
-            time.sleep(3)
-            page_count = 1
-            max_pages = 103
-
-            while page_count <= max_pages:
-                self.logger.info(f"Scraping page {page_count} of {url}")
-
+    def parse(self, response):
+        page_count = 1
+        max_pages = 82  # Safety limit to prevent infinite loops
+        
+        while page_count <= max_pages:
+            try:
+                self.logger.info(f"Processing page {page_count}")
+                
+                # Scroll to load images
                 self.scroll_and_load_images()
+                
+                # Wait for products container
                 WebDriverWait(self.driver, 10).until(
                     EC.presence_of_element_located((By.CSS_SELECTOR, "div.Bm3ON"))
                 )
-
+                time.sleep(random.uniform(1, 2))
+                
+                # Get fresh page source after scrolling
                 html = self.driver.page_source
-                page_response = HtmlResponse(url=self.driver.current_url, body=html.encode('utf-8'), encoding='utf-8')
-
-                products = page_response.css('div.Bm3ON')
-                if not products:
-                    self.logger.info(f"No products found on page {page_count} for {url}")
-                    break
-
+                response = HtmlResponse(url=self.driver.current_url, body=html.encode('utf-8'), encoding='utf-8')
+                
+                # Process products
+                products = response.css('div.Bm3ON')[:40]  # Limit to 40 products
+                
                 for product in products:
                     try:
                         name = product.css('div.RfADt a::text').get()
                         price = product.css('span.ooOxS::text').get()
                         product_url = product.css('a::attr(href)').get()
-                        image_url = product.css('img::attr(src)').get() or product.css('img::attr(data-src)').get()
-
-                        if not product_url:
-                            continue
-
-                        item = {
-                            'name': name.strip() if name else None,
-                            'price': float(price.replace('Rs. ', '').replace(',', '')) if price else None,
-                            'url': response.urljoin(product_url),
-                            'image_url': image_url,
-                            'platform': "Daraz",
-                            'category' : "Electronics",
-                            'sub_category': self.sub_category,
-                            'page_number': page_count,
-                            'timestamp': time.time()
-                        }
-
-                        yield item
+                        image_url = product.css('img::attr(src)').get()
+                        
+                        # Fallback for lazy-loaded images
+                        if not image_url or 'placeholder' in image_url:
+                            image_url = product.css('img::attr(data-src)').get()
+                        
+                        if product_url:  # Only process if we have a URL
+                            item = {
+                                'name': name.strip() if name else None,
+                                'price': float(price.replace('Rs. ', '').replace(',', '')) if price else None,
+                                'url': response.urljoin(product_url),
+                                'image_url': image_url if image_url else None,
+                                'platform': "Daraz",
+                                'category': "Electronics_TVs",
+                                'page_number': page_count,
+                                'last_updated': time.time()
+                            }
+                            
+                            yield item
 
                     except Exception as e:
-                        self.logger.error(f"Error extracting product: {e}")
+                        self.logger.error(f"Error processing product: {e}")
                         continue
 
+                # Try to go to next page
                 if not self.click_next_page():
-                    self.logger.info(f"✅ Completed all pages for category: {url}")
+                    self.logger.info("No more pages available")
                     break
-
+                
+                # Wait for next page to load
+                time.sleep(random.uniform(3, 5))
                 page_count += 1
-                time.sleep(random.uniform(2, 4))
 
-        except Exception as e:
-            self.logger.error(f"❌ Error scraping {url}: {e}")
+            except Exception as e:
+                self.logger.error(f"Error during parsing page {page_count}: {e}")
+                break
+
+        self.logger.info("Scraping completed, closing browser")
+        self.driver.quit()
 
     def closed(self, reason):
+        """Ensure browser is closed even if spider crashes"""
         try:
             self.driver.quit()
         except:
             pass
-        self.logger.info("🧹 Browser closed and spider finished.")
 
 
 class ShophiveSpider(scrapy.Spider):
@@ -430,62 +420,49 @@ class ShophiveSpider(scrapy.Spider):
         self.driver.quit()
         print(f"Spider closed because: {reason}")
 
-# from scrapy import Request
+from scrapy import Request
 
 class PriceOyeSpider(scrapy.Spider):
     name = 'priceoye_category'
     allowed_domains = ['priceoye.pk']
-
-    def __init__(self, urls=None, *args, **kwargs):
-        """
-        Pass multiple URLs dynamically:
-        e.g. process.crawl(PriceOyeSpider, urls=[
-                'https://priceoye.pk/mobiles/pricelist?brands=samsung',
-                'https://priceoye.pk/laptops/pricelist'
-            ])
-        """
+    
+    def __init__(self, *args, **kwargs):
         super(PriceOyeSpider, self).__init__(*args, **kwargs)
-        self.start_urls = urls if urls else []
-
+        self.start_urls = ['https://priceoye.pk/mobiles/pricelist?brands=samsung_infinix_oppo_xiaomi_vivo_tecno_realme']
+        
         chrome_options = Options()
-        # chrome_options.add_argument("--headless")
+        # chrome_options.add_argument("--headless")  
         chrome_options.add_argument("--disable-blink-features=AutomationControlled")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--window-size=1680,1050")
-        chrome_options.add_argument(
-            "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        )
+        chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
         self.driver = webdriver.Chrome(options=chrome_options)
-        self.max_pages = 100  # Safety limit
-        self.item_limit = 1000  # Total items across all URLs
         self.item_count = 0
+        self.current_page = 1
+        self.max_pages = 100  # Safety limit
 
     def start_requests(self):
         for url in self.start_urls:
-            yield scrapy.Request(url, callback=self.parse, meta={'category_url': url})
+            yield Request(url, callback=self.parse)
 
     def parse(self, response):
-        category_url = response.meta['category_url']
-        self.current_page = 1
-
-        self.logger.info(f"📂 Starting category scrape: {category_url}")
-        self.driver.get(category_url)
-        time.sleep(3)
-
+        # Initial page load
+        self.driver.get(response.url)
+        time.sleep(3)  # Initial wait for page load
+        
         while self.current_page <= self.max_pages:
-            print(f"📄 Scraping page {self.current_page} for {category_url}")
-
+            print(f"Scraping page {self.current_page}...")
+            
+            # Wait for products to load with better error handling
             try:
                 WebDriverWait(self.driver, 30).until(
-                    EC.presence_of_all_elements_located(
-                        (By.CSS_SELECTOR, "div.productBox.b-productBox"))
+                    EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.productBox.b-productBox"))
                 )
-
-                # Scroll to load all products
+                
+                # Multiple scrolls to ensure all products load
                 last_height = self.driver.execute_script("return document.body.scrollHeight")
                 for _ in range(3):
                     self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
@@ -494,58 +471,58 @@ class PriceOyeSpider(scrapy.Spider):
                     if new_height == last_height:
                         break
                     last_height = new_height
+                
+                # Scroll back to top to ensure all elements are in view
                 self.driver.execute_script("window.scrollTo(0, 0);")
-
+                time.sleep(1)
+                
             except Exception as e:
-                self.logger.error(f"Error waiting for products: {e}")
+                self.logger.error(f"Error waiting for products on page {self.current_page}: {e}")
                 break
 
+            # Parse the page content
             html = self.driver.page_source
             page_response = HtmlResponse(url=self.driver.current_url, body=html, encoding='utf-8')
-            products = page_response.css('div.productBox.b-productBox')
 
+            # Extract products
+            products = page_response.css('div.productBox.b-productBox')  
+            
             if not products:
-                print(f"No products found on page {self.current_page}. Ending this category.")
+                print(f"No products found on page {self.current_page}. Stopping.")
                 break
-
-            print(f"✅ Found {len(products)} products on page {self.current_page}")
-
+            
+            print(f"Found {len(products)} products on page {self.current_page}")
+            
             items_scraped_on_page = 0
             for product in products:
-                if self.item_count >= self.item_limit:
-                    print(f"Reached item limit ({self.item_limit}). Stopping spider.")
-                    self.driver.quit()
-                    return
-
                 try:
-                    # --- Product Name ---
+                    # Extract product name
                     name = product.css('div.p-title.p-title-center.bold.h5::text').get()
                     if not name:
                         name = product.css('div.p-title::text').get()
+                    
                     if not name:
-                        continue
+                        continue  # Skip if no name found
+                    
                     name = name.strip()
 
-                    # --- Price ---
+                    # Extract price
                     price = product.css('div.price-box.p1 span::text').get()
                     if price:
                         price = price.replace('Rs', '').replace(',', '').strip()
                         try:
-                            price = float(price)
+                            price = float(price) if price else None
                         except ValueError:
                             price = None
+                    else:
+                        price = None
 
-                    # --- Product URL + Image ---
+                    # Extract URLs
                     product_url = product.css('a.ga-dataset::attr(href)').get()
                     image_url = product.css('img.product-thumbnail-img::attr(src)').get()
+
                     if product_url and not product_url.startswith('http'):
                         product_url = response.urljoin(product_url)
-
-                    # --- Category & Sub-category Extraction ---
-                    # Example: https://priceoye.pk/mobiles/smartphones/pricelist
-                    parts = category_url.replace("https://priceoye.pk/", "").split("/")
-                    category = parts[0] if len(parts) > 0 else "Unknown"
-                    sub_category = parts[1] if len(parts) > 1 else None
 
                     yield {
                         'name': name,
@@ -553,64 +530,85 @@ class PriceOyeSpider(scrapy.Spider):
                         'url': product_url,
                         'image_url': image_url,
                         'platform': "PriceOye",
-                        'category': category,
-                        'sub_category': sub_category,
+                        'category': "Electronics",
                         'page_number': self.current_page
                     }
 
                     self.item_count += 1
                     items_scraped_on_page += 1
-                    print(f"🛒 Scraped item {self.item_count}: {name}")
+                    print(f"Scraped item {self.item_count}: {name}")
 
                 except Exception as e:
-                    print(f"Error parsing product: {e}")
+                    print(f"Error extracting product data: {e}")
                     continue
 
-            print(f"📊 Page {self.current_page} done: {items_scraped_on_page} items scraped")
+            print(f"Completed page {self.current_page}. Items scraped on this page: {items_scraped_on_page}, Total items: {self.item_count}")
 
+            # Check if we should stop (no products scraped)
             if items_scraped_on_page == 0:
-                print("No items on this page. Stopping category.")
+                print("No items scraped on current page. Stopping.")
                 break
 
-            # --- Handle Pagination ---
+            # PAGINATION - Try to go to next page
             try:
+                # Wait for pagination to be available
                 WebDriverWait(self.driver, 10).until(
                     EC.presence_of_element_located((By.CSS_SELECTOR, 'div.pagination'))
                 )
+                
+                # Find next button
                 next_button = self.driver.find_element(By.CSS_SELECTOR, 'a#next-button.next[rel="next"]')
-
+                
+                # Check if next button is enabled
                 if next_button.is_enabled() and 'disabled' not in next_button.get_attribute('class'):
-                    print("➡️ Clicking next page...")
+                    print("Clicking next button...")
+                    
+                    # Store current URL to verify page change
                     current_url = self.driver.current_url
-                    self.driver.execute_script(
-                        "arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", next_button)
+                    
+                    # Scroll to next button and click using JavaScript
+                    self.driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", next_button)
                     time.sleep(1)
+                    
                     self.driver.execute_script("arguments[0].click();", next_button)
-
-                    WebDriverWait(self.driver, 30).until(
-                        lambda driver: driver.current_url != current_url
-                    )
-                    WebDriverWait(self.driver, 30).until(
-                        EC.presence_of_all_elements_located(
-                            (By.CSS_SELECTOR, "div.productBox.b-productBox"))
-                    )
-
-                    self.current_page += 1
-                    print(f"✅ Moved to page {self.current_page}")
-                    time.sleep(random.uniform(2, 4))
-
+                    
+                    # Wait for page to change and load
+                    try:
+                        WebDriverWait(self.driver, 30).until(
+                            lambda driver: driver.current_url != current_url
+                        )
+                        
+                        # Wait for products to load on new page
+                        WebDriverWait(self.driver, 30).until(
+                            EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.productBox.b-productBox"))
+                        )
+                        
+                        self.current_page += 1
+                        print(f"Successfully moved to page {self.current_page}")
+                        
+                        # Add a small delay before processing next page
+                        time.sleep(2)
+                        
+                    except TimeoutException:
+                        print("Page did not change after clicking next button. Stopping.")
+                        break
+                    
                 else:
-                    print("🚫 Next button disabled — no more pages.")
+                    print("Next button is disabled - no more pages available")
                     break
-
-            except (TimeoutException, NoSuchElementException):
-                print("⚠️ Pagination not found or stopped. Ending category.")
+                    
+            except TimeoutException:
+                print("Pagination container not found within timeout. Stopping.")
+                break
+            except NoSuchElementException:
+                print("Next button element not found. Stopping.")
                 break
             except Exception as e:
-                print(f"Error moving to next page: {e}")
+                print(f"Error navigating to next page: {e}")
                 break
 
-        print(f"🏁 Completed {category_url} | Pages: {self.current_page - 1} | Total items: {self.item_count}")
+        print(f"Scraping completed. Total pages: {self.current_page - 1}, Total items: {self.item_count}")
+        self.driver.quit()
 
     def closed(self, reason):
         print(f"Spider closed: {reason}")
@@ -618,4 +616,3 @@ class PriceOyeSpider(scrapy.Spider):
             self.driver.quit()
         except:
             pass
-
