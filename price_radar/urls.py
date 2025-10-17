@@ -34,6 +34,7 @@ urlpatterns = [
     path('test/', test, name='test'),
     path('getProductsByCategory/', getProductsByCategory, name='getProductsByCategory'),
     path('getProductsBySubCategory/', getProductsBySubCategory, name='getProductsBySubCategory'),
+    # path('search_products/', search_products, name='search_products')
     # path('startSchedular/', startSchedular, name='startSchedular'),
     # path('get-scraped-data/', get_scraped_data_view, name='get-scraped-data'),
     # path('check-scraping-status/', check_scraping_status)

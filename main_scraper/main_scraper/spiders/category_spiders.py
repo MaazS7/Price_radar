@@ -26,10 +26,7 @@ class DarazScraper(scrapy.Spider):
                 self.urls_to_scrape = urls
         else:
             print("no urls found for scraping")
-        # else:
-        #     self.urls_to_scrape = [
-        #         'https://www.daraz.pk/catalog/?spm=a2a0e.searchlist.cate_2.9.1a2e762fRU9g5n&q=Televisions'
-        #     ]
+            self.urls_to_scrape = []
 
         # Initialize Chrome only once
         chrome_options = Options()
@@ -44,19 +41,43 @@ class DarazScraper(scrapy.Spider):
         self.driver = webdriver.Chrome(service=service, options=chrome_options)
 
     def start_requests(self):
-        """Start with the first URL in the list."""
-        for url in self.urls_to_scrape:
+        """Start with ONLY the first URL in the list"""
+        if not self.urls_to_scrape:
+            self.logger.error("No URLs provided for scraping")
+            return
 
-            lower_url = url.lower()
+        # Start with first URL only
+        first_url = self.urls_to_scrape[0]
+        remaining_urls = self.urls_to_scrape[1:]
+        
+        self.logger.info(f"🎯 Starting sequential scraping with {len(self.urls_to_scrape)} URLs")
+        self.logger.info(f"📝 URLs to process: {self.urls_to_scrape}")
+        
+        # Detect category for first URL
+        self._set_sub_category(first_url)
+        
+        yield scrapy.Request(
+            url=first_url, 
+            callback=self.parse_category, 
+            meta={
+                'current_url': first_url,
+                'remaining_urls': remaining_urls,
+                'current_url_index': 0
+            }
+        )
 
-            if "television" in lower_url:
-                self.sub_category = "Televisions"
-            elif "phone" in lower_url:
-                self.sub_category = "Phones"
-            elif "laptop" in lower_url:
-                self.sub_category = "Laptops"
-
-            yield scrapy.Request(url=url, callback=self.parse_category, meta={'category_url': url})
+    def _set_sub_category(self, url):
+        """Set sub_category based on URL content"""
+        lower_url = url.lower()
+        if "television" in lower_url:
+            self.sub_category = "Televisions"
+        elif "phone" in lower_url:
+            self.sub_category = "Phones"
+        elif "laptop" in lower_url:
+            self.sub_category = "Laptops"
+        else:
+            self.sub_category = "Other Electronics"
+        self.logger.info(f"🏷️  Category detected: {self.sub_category}")
 
     def scroll_and_load_images(self):
         """Scroll through the page to trigger image loading"""
@@ -95,17 +116,21 @@ class DarazScraper(scrapy.Spider):
 
     def parse_category(self, response):
         """Scrape each category (URL) fully before moving to the next."""
-        url = response.meta['category_url']
-        self.logger.info(f"🚀 Starting category: {url}")
+        current_url = response.meta['current_url']
+        remaining_urls = response.meta['remaining_urls']
+        current_url_index = response.meta['current_url_index']
+        
+        self.logger.info(f"🚀 Starting category {current_url_index + 1}/{len(self.urls_to_scrape)}: {current_url}")
 
         try:
-            self.driver.get(url)
+            self.driver.get(current_url)
             time.sleep(3)
             page_count = 1
             max_pages = 103
+            total_products_scraped = 0
 
             while page_count <= max_pages:
-                self.logger.info(f"Scraping page {page_count} of {url}")
+                self.logger.info(f"📄 Scraping page {page_count} of {current_url}")
 
                 self.scroll_and_load_images()
                 WebDriverWait(self.driver, 10).until(
@@ -117,9 +142,10 @@ class DarazScraper(scrapy.Spider):
 
                 products = page_response.css('div.Bm3ON')
                 if not products:
-                    self.logger.info(f"No products found on page {page_count} for {url}")
+                    self.logger.info(f"❌ No products found on page {page_count} for {current_url}")
                     break
 
+                page_products = 0
                 for product in products:
                     try:
                         name = product.css('div.RfADt a::text').get()
@@ -136,27 +162,72 @@ class DarazScraper(scrapy.Spider):
                             'url': response.urljoin(product_url),
                             'image_url': image_url,
                             'platform': "Daraz",
-                            'category' : "Electronics",
+                            'category': "Electronics",
                             'sub_category': self.sub_category,
                             'page_number': page_count,
-                            'timestamp': time.time()
+                            'timestamp': time.time(),
+                            'source_url': current_url
                         }
 
                         yield item
+                        page_products += 1
+                        total_products_scraped += 1
 
                     except Exception as e:
                         self.logger.error(f"Error extracting product: {e}")
                         continue
 
+                self.logger.info(f"✅ Page {page_count} completed: {page_products} products scraped")
+
+                # Check if there's a next page
                 if not self.click_next_page():
-                    self.logger.info(f"✅ Completed all pages for category: {url}")
+                    self.logger.info(f"🎉 Category COMPLETED: {current_url} - Total: {total_products_scraped} products, {page_count} pages")
                     break
 
                 page_count += 1
                 time.sleep(random.uniform(2, 4))
 
+            # After finishing current URL, move to next URL if any
+            if remaining_urls:
+                next_url = remaining_urls[0]
+                next_remaining = remaining_urls[1:]
+                next_index = current_url_index + 1
+                
+                self.logger.info(f"🔄 Moving to next URL: {next_url} ({next_index + 1}/{len(self.urls_to_scrape)})")
+                
+                # Detect category for next URL
+                self._set_sub_category(next_url)
+                
+                yield scrapy.Request(
+                    url=next_url,
+                    callback=self.parse_category,
+                    meta={
+                        'current_url': next_url,
+                        'remaining_urls': next_remaining,
+                        'current_url_index': next_index
+                    }
+                )
+            else:
+                self.logger.info("🎊 All URLs completed! Scraping finished.")
+
         except Exception as e:
-            self.logger.error(f"❌ Error scraping {url}: {e}")
+            self.logger.error(f"❌ Error scraping {current_url}: {e}")
+            
+            # Even if error, try to move to next URL
+            if remaining_urls:
+                next_url = remaining_urls[0]
+                self.logger.info(f"🔄 Error occurred, moving to next URL: {next_url}")
+                
+                self._set_sub_category(next_url)
+                yield scrapy.Request(
+                    url=next_url,
+                    callback=self.parse_category,
+                    meta={
+                        'current_url': next_url,
+                        'remaining_urls': remaining_urls[1:],
+                        'current_url_index': current_url_index + 1
+                    }
+                )
 
     def closed(self, reason):
         try:

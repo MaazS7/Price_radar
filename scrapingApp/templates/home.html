@@ -38,7 +38,7 @@
 <body>
     <h1>Price Radar</h1>
     {% if error %}<div class="error">{{ error }}</div>{% endif %}
-    <form method="get" action="{% url 'get_products' %}" class="search-form">
+    <form method="get" action="{% url 'search_products' %}" class="search-form">
         <input type="text" name="query" placeholder="Search for products (e.g., Samsung Galaxy S23)" required>
         <button type="submit">Search</button>
     </form>

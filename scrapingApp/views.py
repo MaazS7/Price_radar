@@ -119,8 +119,8 @@ def search_product_view(request):
                 "message": str(e)
             })
         
-def search_products(query):
-    query_words = query.split()
+def search_products(request, query):
+    query_words = request.GET.get("query", "").strip()
     
     if not query_words:
         return []
@@ -280,6 +280,56 @@ def getProductsBySubCategory(request):
 
     else:
         return HttpResponse("Product not present")
+    
+
+def getProductsByPlatform(request):
+    query = request.GET.get("query", "").strip()
+    page = int(request.GET.get("page", 1))  # Default to page 1
+    per_page = 20  # Number of products per page
+
+    skip = (page - 1) * per_page
+
+    # MongoDB query with pagination
+    products_cursor = products_collection.find({
+        "platform": {"$regex": f".*{query}.*", "$options": "i"}
+    }).skip(skip).limit(per_page)
+
+    products = list(products_cursor)
+
+    if products:
+        data = [
+            {
+                'title': prod.get("name"),
+                'original_price': prod.get("original_price"),
+                'current_price': prod.get("current_price"),
+                'previous_price': prod.get("previous_price"),
+                'category': prod.get("category"),
+                'url': prod.get("url"),
+                'image_url': prod.get("image_url"),
+                'platform': prod.get("platform")
+            }
+            for prod in products
+        ]
+
+        # Get total count (for frontend to know how many pages exist)
+        total_count = products_collection.count_documents({
+            "platform": {"$regex": f".*{query}.*", "$options": "i"}
+        })
+
+        response = {
+            'products': data,
+            'total_count': total_count,
+            'current_page': page,
+            'per_page': per_page,
+            'total_pages': (total_count + per_page - 1) // per_page
+        }
+
+        return JsonResponse(response, safe=False)
+
+    else:
+        return HttpResponse("Product not present")
+    
+
 
 def test(request):
     url = request.GET.get("query", "").strip()

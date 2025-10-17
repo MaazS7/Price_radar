@@ -97,6 +97,16 @@ class MongoDBPipeline:
             try:
                 collection.insert_one(dict(item))
             except DuplicateKeyError:
+                collection.find_one_and_update(
+                     {"url": item["url"]},
+                        [
+                            {"$set": {
+                                "previous_price": "$current_price",
+                                "current_price": item["price"],
+                                "last_updated": {"$toDate": "$$NOW"}
+                            }}
+                        ],
+                )
             # Skip if document already exists
                 spider.logger.debug(f"Duplicate item found: {item['url']}")
             except Exception as e:

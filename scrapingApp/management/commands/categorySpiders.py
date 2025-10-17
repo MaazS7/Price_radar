@@ -31,8 +31,10 @@ class Command(BaseCommand):
         daraz_urls=[
             # "https://www.daraz.pk/catalog/?from=hp_categories&page=20&q=Smart%20Phones&service=all_channel",
             # "https://www.daraz.pk/catalog/?spm=a2a0e.searchlist.cate_5.10.44e02c3f9VJbIC&q=Laptops&from=hp_categories&src=all_channel",
-            "https://www.daraz.pk/catalog/?spm=a2a0e.searchlist.cate_2.9.1a2e762fRU9g5n&q=Televisions&from=hp_categories&src=all_channel",
-            "https://www.daraz.pk/catalog/?spm=a2a0e.pdp_revamp.cate_5.7.137a57f6CoqmIt&q=Smart%20Watches&from=hp_categories&src=all_channel",
+            # "https://www.daraz.pk/catalog/?spm=a2a0e.searchlist.cate_2.9.1a2e762fRU9g5n&q=Televisions&from=hp_categories&src=all_channel",
+            # "https://www.daraz.pk/catalog/?spm=a2a0e.pdp_revamp.cate_5.7.137a57f6CoqmIt&q=Smart%20Watches&from=hp_categories&src=all_channel",
+            "https://www.daraz.pk/catalog/?q=Headphones%20%26%20Headsets&from=lp_category&src=all_channel&searchFlag=1&spm=a2a0e.categorylp.0.0",
+            "https://www.daraz.pk/catalog/?q=Kitchen%20Appliances&from=lp_category&src=all_channel&searchFlag=1&spm=a2a0e.categorylp.0.0",
         ]
         
 
