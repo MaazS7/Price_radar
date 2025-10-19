@@ -624,7 +624,7 @@ class PriceOyeSpider(scrapy.Spider):
                         'url': product_url,
                         'image_url': image_url,
                         'platform': "PriceOye",
-                        'category': category,
+                        'category': "Electronics",
                         'sub_category': sub_category,
                         'page_number': self.current_page
                     }
