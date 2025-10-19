@@ -147,7 +147,7 @@ def getProductsBySearch(request):
 
     # MongoDB query with pagination
     products_cursor = products_collection.find({
-        "platform": {"$regex": f".*{query}.*", "$options": "i"}
+        "name": {"$regex": f".*{query}.*", "$options": "i"}
     }).skip(skip).limit(per_page)
 
     products = list(products_cursor)
@@ -169,7 +169,7 @@ def getProductsBySearch(request):
 
         # Get total count (for frontend to know how many pages exist)
         total_count = products_collection.count_documents({
-            "platform": {"$regex": f".*{query}.*", "$options": "i"}
+            "name": {"$regex": f".*{query}.*", "$options": "i"}
         })
 
         response = {
@@ -217,7 +217,7 @@ def getProductsByCategory(request):
 
         # Get total count (for frontend to know how many pages exist)
         total_count = products_collection.count_documents({
-            "platform": {"$regex": f".*{query}.*", "$options": "i"}
+            "category": {"$regex": f".*{query}.*", "$options": "i"}
         })
 
         response = {
@@ -265,7 +265,7 @@ def getProductsBySubCategory(request):
 
         # Get total count (for frontend to know how many pages exist)
         total_count = products_collection.count_documents({
-            "platform": {"$regex": f".*{query}.*", "$options": "i"}
+            "sub_category": {"$regex": f".*{query}.*", "$options": "i"}
         })
 
         response = {
