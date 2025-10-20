@@ -138,6 +138,7 @@ def search_products(request, query):
 
     # return redirect("loading_view")
 
+
 def getProductsBySearch(request):
     query = request.GET.get("query", "").strip()
     page = int(request.GET.get("page", 1))  # Default to page 1
@@ -373,6 +374,38 @@ def product_updation(stale_products):
                     
     except Exception as e:
         print(f"Failed to start scraper: {e}")
+
+def sort_test(request):
+    query = request.GET.get("query", "").strip()
+    page = int(request.GET.get("page", 1))
+
+    sort_order = 1
+    per_page = 20
+    skip_count = (page - 1)*per_page
+
+    results= products_collection.find({
+        "name": {"$regex": f".*{query}.*", "$options": "i"}
+    }).sort("price", sort_order).skip(skip_count).limit(per_page)
+
+    products = list(results)
+
+    
+    data = [
+        {
+            'title': prod.get("name"),
+            'original_price': prod.get("original_price"),
+            'current_price': prod.get("current_price"),
+            'previous_price': prod.get("previous_price"),
+            'category': prod.get("category"),
+            'url': prod.get("url"),
+            'image_url': prod.get("image_url"),
+            'platform': prod.get("platform")
+        }
+        for prod in products
+    ]
+
+    return JsonResponse({'products': data}, safe=False)
+
 
 
 
