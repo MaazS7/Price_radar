@@ -36,15 +36,22 @@ class Command(BaseCommand):
             "https://www.daraz.pk/catalog/?q=Headphones%20%26%20Headsets&from=lp_category&src=all_channel&searchFlag=1&spm=a2a0e.categorylp.0.0",
             "https://www.daraz.pk/catalog/?q=Kitchen%20Appliances&from=lp_category&src=all_channel&searchFlag=1&spm=a2a0e.categorylp.0.0",
         ]
+
+        priceOye_urls = [
+            "https://priceoye.pk/smart-watches/pricelist?brands=faster_sveston_zero_assorted_dany_samsung_yolo_airox",
+            "https://priceoye.pk/mobiles/pricelist?brands=samsung_infinix_oppo_xiaomi_vivo_tecno_realme_itel_apple_asus_blackberry_dcode_digit_google_honor_htc_huawei_lenovo_nokia_nothing_oneplus_qmobile_sego_sony_vgo-tel_motorola",
+            "https://priceoye.pk/tablets/pricelist?sort=price_asc",
+            "https://priceoye.pk/wireless-earbuds/pricelist?sort=price_asc"
+        ]
         
 
         self.stdout.write(self.style.SUCCESS(f"🚀 Running Scrapy for query:"))
 
         process = CrawlerProcess(get_project_settings())
-        process.crawl(DarazScraper, urls= daraz_urls)
+        # process.crawl(DarazScraper, urls= daraz_urls)
         # time.sleep(20)
         # process.crawl(ShophiveSpider)
-        # process.crawl(PriceOyeSpider)
+        process.crawl(PriceOyeSpider, urls = priceOye_urls)
         process.start(stop_after_crawl=True)
 
         self.stdout.write(self.style.SUCCESS(f"✅ Scrapy completed for query:"))
