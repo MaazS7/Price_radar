@@ -503,6 +503,7 @@ class ShophiveSpider(scrapy.Spider):
 
 # from scrapy import Request
 
+
 class PriceOyeSpider(scrapy.Spider):
     name = 'priceoye_category'
     allowed_domains = ['priceoye.pk']
@@ -516,7 +517,15 @@ class PriceOyeSpider(scrapy.Spider):
             ])
         """
         super(PriceOyeSpider, self).__init__(*args, **kwargs)
-        self.start_urls = urls if urls else []
+        
+        # Accept list or comma-separated URLs
+        if urls:
+            if isinstance(urls, str):
+                self.urls_to_scrape = [u.strip() for u in urls.split(',') if u.strip()]
+            else:
+                self.urls_to_scrape = urls
+        else:
+            self.urls_to_scrape = []
 
         chrome_options = Options()
         # chrome_options.add_argument("--headless")
@@ -532,23 +541,48 @@ class PriceOyeSpider(scrapy.Spider):
 
         self.driver = webdriver.Chrome(options=chrome_options)
         self.max_pages = 100  # Safety limit
-        self.item_limit = 1000  # Total items across all URLs
+        self.item_limit = 10000  # Total items across all URLs
         self.item_count = 0
 
     def start_requests(self):
-        for url in self.start_urls:
-            yield scrapy.Request(url, callback=self.parse, meta={'category_url': url})
+        """Start with ONLY the first URL in the list"""
+        if not self.urls_to_scrape:
+            self.logger.error("No URLs provided for scraping")
+            return
+
+        # Start with first URL only
+        first_url = self.urls_to_scrape[0]
+        remaining_urls = self.urls_to_scrape[1:]
+        
+        self.logger.info(f"🎯 Starting sequential scraping with {len(self.urls_to_scrape)} URLs")
+        self.logger.info(f"📝 URLs to process: {self.urls_to_scrape}")
+        
+        yield scrapy.Request(
+            url=first_url, 
+            callback=self.parse, 
+            meta={
+                'current_url': first_url,
+                'remaining_urls': remaining_urls,
+                'current_url_index': 0
+            }
+        )
 
     def parse(self, response):
-        category_url = response.meta['category_url']
-        self.current_page = 1
+        """Scrape each category (URL) fully before moving to the next."""
+        current_url = response.meta['current_url']
+        remaining_urls = response.meta['remaining_urls']
+        current_url_index = response.meta['current_url_index']
+        
+        self.logger.info(f"🚀 Starting category {current_url_index + 1}/{len(self.urls_to_scrape)}: {current_url}")
 
-        self.logger.info(f"📂 Starting category scrape: {category_url}")
-        self.driver.get(category_url)
+        self.current_page = 1
+        category_item_count = 0
+
+        self.driver.get(current_url)
         time.sleep(3)
 
         while self.current_page <= self.max_pages:
-            print(f"📄 Scraping page {self.current_page} for {category_url}")
+            print(f"📄 Scraping page {self.current_page} for {current_url}")
 
             try:
                 WebDriverWait(self.driver, 30).until(
@@ -613,8 +647,7 @@ class PriceOyeSpider(scrapy.Spider):
                         product_url = response.urljoin(product_url)
 
                     # --- Category & Sub-category Extraction ---
-                    # Example: https://priceoye.pk/mobiles/smartphones/pricelist
-                    parts = category_url.replace("https://priceoye.pk/", "").split("/")
+                    parts = current_url.replace("https://priceoye.pk/", "").split("/")
                     category = parts[0] if len(parts) > 0 else "Unknown"
                     sub_category = parts[1] if len(parts) > 1 else None
 
@@ -626,10 +659,13 @@ class PriceOyeSpider(scrapy.Spider):
                         'platform': "PriceOye",
                         'category': "Electronics",
                         'sub_category': sub_category,
-                        'page_number': self.current_page
+                        'page_number': self.current_page,
+                        'source_url': current_url,
+                        'timestamp': time.time()
                     }
 
                     self.item_count += 1
+                    category_item_count += 1
                     items_scraped_on_page += 1
                     print(f"🛒 Scraped item {self.item_count}: {name}")
 
@@ -652,14 +688,14 @@ class PriceOyeSpider(scrapy.Spider):
 
                 if next_button.is_enabled() and 'disabled' not in next_button.get_attribute('class'):
                     print("➡️ Clicking next page...")
-                    current_url = self.driver.current_url
+                    current_driver_url = self.driver.current_url
                     self.driver.execute_script(
                         "arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", next_button)
                     time.sleep(1)
                     self.driver.execute_script("arguments[0].click();", next_button)
 
                     WebDriverWait(self.driver, 30).until(
-                        lambda driver: driver.current_url != current_url
+                        lambda driver: driver.current_url != current_driver_url
                     )
                     WebDriverWait(self.driver, 30).until(
                         EC.presence_of_all_elements_located(
@@ -681,7 +717,27 @@ class PriceOyeSpider(scrapy.Spider):
                 print(f"Error moving to next page: {e}")
                 break
 
-        print(f"🏁 Completed {category_url} | Pages: {self.current_page - 1} | Total items: {self.item_count}")
+        print(f"🏁 Completed {current_url} | Pages: {self.current_page - 1} | Category items: {category_item_count} | Total items: {self.item_count}")
+
+        # After finishing current URL, move to next URL if any
+        if remaining_urls:
+            next_url = remaining_urls[0]
+            next_remaining = remaining_urls[1:]
+            next_index = current_url_index + 1
+            
+            self.logger.info(f"🔄 Moving to next URL: {next_url} ({next_index + 1}/{len(self.urls_to_scrape)})")
+            
+            yield scrapy.Request(
+                url=next_url,
+                callback=self.parse,
+                meta={
+                    'current_url': next_url,
+                    'remaining_urls': next_remaining,
+                    'current_url_index': next_index
+                }
+            )
+        else:
+            self.logger.info("🎊 All URLs completed! Scraping finished.")
 
     def closed(self, reason):
         print(f"Spider closed: {reason}")
