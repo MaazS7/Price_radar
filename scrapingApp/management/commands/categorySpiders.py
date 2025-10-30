@@ -45,7 +45,7 @@ class Command(BaseCommand):
         ]
 
         shophive_urls = [
-            # "https://www.shophive.com/mobile-phones?manufacturer=apple,nokia,oneplus,oppo,philips,realme,samsung,sony,infinix,mi,honor,tecno,vivo,nothing,sego,dcode,itel",
+            "https://www.shophive.com/mobile-phones?manufacturer=apple,nokia,oneplus,oppo,philips,realme,samsung,sony,infinix,mi,honor,tecno,vivo,nothing,sego,dcode,itel",
             "https://www.shophive.com/smart-watches",
             "https://www.shophive.com/laptops-computers/laptops",
             "https://www.shophive.com/tv/led",
