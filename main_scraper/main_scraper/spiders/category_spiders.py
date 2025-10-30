@@ -237,14 +237,35 @@ class DarazScraper(scrapy.Spider):
         self.logger.info("🧹 Browser closed and spider finished.")
 
 
+import scrapy
+import time
+import random
+from scrapy.http import HtmlResponse
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
+
+
 class ShophiveSpider(scrapy.Spider):
     name = 'shophive_category'
     allowed_domains = ['shophive.com']
     
-    def __init__(self, *args, **kwargs):
+    def __init__(self, urls=None, *args, **kwargs):
         super(ShophiveSpider, self).__init__(*args, **kwargs)
-        self.start_urls = [f'https://www.shophive.com/mobile-phones?manufacturer=apple,nokia,oneplus,oppo,philips,realme,samsung,sony,infinix,mi,honor,tecno,vivo,nothing,sego,dcode,itel']
         
+        # Accept list or comma-separated URLs
+        if urls:
+            if isinstance(urls, str):
+                self.urls_to_scrape = [u.strip() for u in urls.split(',') if u.strip()]
+            else:
+                self.urls_to_scrape = urls
+        else:
+            # Default URL if none provided
+            self.urls_to_scrape = ['https://www.shophive.com/mobile-phones?manufacturer=apple,nokia,oneplus,oppo,philips,realme,samsung,sony,infinix,mi,honor,tecno,vivo,nothing,sego,dcode,itel']
+
         chrome_options = Options()
         # chrome_options.add_argument("--headless=new")  
         chrome_options.add_argument("--disable-blink-features=AutomationControlled")
@@ -253,9 +274,32 @@ class ShophiveSpider(scrapy.Spider):
         chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
         self.driver = webdriver.Chrome(options=chrome_options)  
-        self.driver.get("https://www.google.com")
+        self.driver.get("https://www.google.com")  # Initial page load
         self.item_count = 0
         self.max_items = 10000
+
+    def start_requests(self):
+        """Start with ONLY the first URL in the list"""
+        if not self.urls_to_scrape:
+            self.logger.error("No URLs provided for scraping")
+            return
+
+        # Start with first URL only
+        first_url = self.urls_to_scrape[0]
+        remaining_urls = self.urls_to_scrape[1:]
+        
+        self.logger.info(f"🎯 Starting sequential scraping with {len(self.urls_to_scrape)} URLs")
+        self.logger.info(f"📝 URLs to process: {self.urls_to_scrape}")
+        
+        yield scrapy.Request(
+            url=first_url, 
+            callback=self.parse, 
+            meta={
+                'current_url': first_url,
+                'remaining_urls': remaining_urls,
+                'current_url_index': 0
+            }
+        )
 
     def smooth_scroll_to_bottom(self, scroll_pause_time=2, scroll_step=300):
         """Scroll down gradually with smooth animation"""
@@ -349,7 +393,7 @@ class ShophiveSpider(scrapy.Spider):
         
         return False
 
-    def scrape_products(self):
+    def scrape_products(self, current_url):
         """Extract product data from the current page"""
         print("Starting to scrape products...")
         
@@ -396,14 +440,21 @@ class ShophiveSpider(scrapy.Spider):
                         except ValueError:
                             price = None
 
+                    # Extract category from URL
+                    parts = current_url.replace("https://www.shophive.com/", "").split("?")[0].split("/")
+                    category = parts[0].replace("-", " ").title() if parts else "Electronics"
+                    sub_category = parts[1].replace("-", " ").title() if len(parts) > 1 else "Mobile Phones"
+
                     product_data = {
                         'name': name,
                         'price': price,
                         'url': product_url,
                         'image_url': image_url,
                         'platform': "Shophive",
-                        'category': "Electronics",
-                        'sub_category': "Mobile Phones"
+                        'category': category,
+                        'sub_category': sub_category,
+                        'source_url': current_url,
+                        'timestamp': time.time()
                     }
                     
                     products_data.append(product_data)
@@ -426,12 +477,19 @@ class ShophiveSpider(scrapy.Spider):
                 products = []
                 print("No products found")
 
-        print(f"Scraping completed. Total products scraped: {self.item_count}")
+        print(f"Scraping completed. Total products scraped: {len(products_data)} from this URL")
         return products_data
 
     def parse(self, response):
+        """Scrape each category (URL) fully before moving to the next."""
+        current_url = response.meta['current_url']
+        remaining_urls = response.meta['remaining_urls']
+        current_url_index = response.meta['current_url_index']
+        
+        self.logger.info(f"🚀 Starting category {current_url_index + 1}/{len(self.urls_to_scrape)}: {current_url}")
+
         print("Scraping started...")
-        self.driver.get(response.url)
+        self.driver.get(current_url)
 
         # Initial wait for products to load
         WebDriverWait(self.driver, 20).until(
@@ -489,13 +547,34 @@ class ShophiveSpider(scrapy.Spider):
         print("Finished loading all available products")
         
         # NOW SCRAPE THE PRODUCTS after pagination is complete
-        products_data = self.scrape_products()
+        products_data = self.scrape_products(current_url)
         
         # Yield all scraped products
         for product in products_data:
             yield product
 
-        print(f"Scraping completed. Total products scraped: {self.item_count}")
+        category_item_count = len(products_data)
+        print(f"✅ Category COMPLETED: {current_url} - Products: {category_item_count}")
+
+        # After finishing current URL, move to next URL if any
+        if remaining_urls:
+            next_url = remaining_urls[0]
+            next_remaining = remaining_urls[1:]
+            next_index = current_url_index + 1
+            
+            self.logger.info(f"🔄 Moving to next URL: {next_url} ({next_index + 1}/{len(self.urls_to_scrape)})")
+            
+            yield scrapy.Request(
+                url=next_url,
+                callback=self.parse,
+                meta={
+                    'current_url': next_url,
+                    'remaining_urls': next_remaining,
+                    'current_url_index': next_index
+                }
+            )
+        else:
+            self.logger.info(f"🎊 All URLs completed! Total items scraped: {self.item_count}")
 
     def closed(self, reason):
         self.driver.quit()

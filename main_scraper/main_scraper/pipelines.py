@@ -108,7 +108,7 @@ class MongoDBPipeline:
                         ],
                 )
             # Skip if document already exists
-                spider.logger.debug(f"Duplicate item found: {item['url']}")
+                spider.logger.debug(f"Duplicate item found: {item['url']} found and updated.")
             except Exception as e:
                 spider.logger.error(f"Error inserting item: {e}")
 

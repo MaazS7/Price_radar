@@ -29,12 +29,12 @@ class Command(BaseCommand):
         # Ensure Scrapy settings are loaded correctly
 
         daraz_urls=[
-            # "https://www.daraz.pk/catalog/?from=hp_categories&page=20&q=Smart%20Phones&service=all_channel",
-            # "https://www.daraz.pk/catalog/?spm=a2a0e.searchlist.cate_5.10.44e02c3f9VJbIC&q=Laptops&from=hp_categories&src=all_channel",
-            # "https://www.daraz.pk/catalog/?spm=a2a0e.searchlist.cate_2.9.1a2e762fRU9g5n&q=Televisions&from=hp_categories&src=all_channel",
-            # "https://www.daraz.pk/catalog/?spm=a2a0e.pdp_revamp.cate_5.7.137a57f6CoqmIt&q=Smart%20Watches&from=hp_categories&src=all_channel",
+            "https://www.daraz.pk/catalog/?from=hp_categories&page=20&q=Smart%20Phones&service=all_channel",
+            "https://www.daraz.pk/catalog/?spm=a2a0e.searchlist.cate_5.10.44e02c3f9VJbIC&q=Laptops&from=hp_categories&src=all_channel",
+            "https://www.daraz.pk/catalog/?spm=a2a0e.searchlist.cate_2.9.1a2e762fRU9g5n&q=Televisions&from=hp_categories&src=all_channel",
+            "https://www.daraz.pk/catalog/?spm=a2a0e.pdp_revamp.cate_5.7.137a57f6CoqmIt&q=Smart%20Watches&from=hp_categories&src=all_channel",
             "https://www.daraz.pk/catalog/?q=Headphones%20%26%20Headsets&from=lp_category&src=all_channel&searchFlag=1&spm=a2a0e.categorylp.0.0",
-            "https://www.daraz.pk/catalog/?q=Kitchen%20Appliances&from=lp_category&src=all_channel&searchFlag=1&spm=a2a0e.categorylp.0.0",
+            "https://www.daraz.pk/catalog/?q=Kitchen%20Appliances&from=lp_category&src=all_channel&searchFlag=1&spm=a2a0e.categorylp.0.0"
         ]
 
         priceOye_urls = [
@@ -43,6 +43,16 @@ class Command(BaseCommand):
             "https://priceoye.pk/tablets/pricelist?sort=price_asc",
             "https://priceoye.pk/wireless-earbuds/pricelist?sort=price_asc"
         ]
+
+        shophive_urls = [
+            # "https://www.shophive.com/mobile-phones?manufacturer=apple,nokia,oneplus,oppo,philips,realme,samsung,sony,infinix,mi,honor,tecno,vivo,nothing,sego,dcode,itel",
+            "https://www.shophive.com/smart-watches",
+            "https://www.shophive.com/laptops-computers/laptops",
+            "https://www.shophive.com/tv/led",
+            "https://www.shophive.com/audio/headphones",
+            "https://www.shophive.com/audio/earbuds",
+            "https://www.shophive.com/shop/printers",
+        ]
         
 
         self.stdout.write(self.style.SUCCESS(f"🚀 Running Scrapy for query:"))
@@ -50,8 +60,8 @@ class Command(BaseCommand):
         process = CrawlerProcess(get_project_settings())
         # process.crawl(DarazScraper, urls= daraz_urls)
         # time.sleep(20)
-        # process.crawl(ShophiveSpider)
-        process.crawl(PriceOyeSpider, urls = priceOye_urls)
+        process.crawl(ShophiveSpider, urls = shophive_urls)
+        # process.crawl(PriceOyeSpider, urls = priceOye_urls)
         process.start(stop_after_crawl=True)
 
         self.stdout.write(self.style.SUCCESS(f"✅ Scrapy completed for query:"))
