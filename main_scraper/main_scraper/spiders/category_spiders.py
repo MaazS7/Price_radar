@@ -72,9 +72,15 @@ class DarazScraper(scrapy.Spider):
         if "television" in lower_url:
             self.sub_category = "Televisions"
         elif "phone" in lower_url:
-            self.sub_category = "Phones"
+            self.sub_category = "Mobile Phones"
         elif "laptop" in lower_url:
             self.sub_category = "Laptops"
+        elif "watches" in lower_url:
+            self.sub_category = "Watches"
+        elif "headsets" in lower_url:
+            self.sub_category = "Headphones"
+        elif "appliances" in lower_url:
+            self.sub_category = "Home Appliances"
         else:
             self.sub_category = "Other Electronics"
         self.logger.info(f"🏷️  Category detected: {self.sub_category}")
@@ -237,18 +243,6 @@ class DarazScraper(scrapy.Spider):
         self.logger.info("🧹 Browser closed and spider finished.")
 
 
-import scrapy
-import time
-import random
-from scrapy.http import HtmlResponse
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
-
-
 class ShophiveSpider(scrapy.Spider):
     name = 'shophive_category'
     allowed_domains = ['shophive.com']
@@ -278,6 +272,25 @@ class ShophiveSpider(scrapy.Spider):
         self.item_count = 0
         self.max_items = 10000
 
+    def _set_sub_category(self, url):
+        """Set sub_category based on URL content - SAME LOGIC AS DARAZ SPIDER"""
+        lower_url = url.lower()
+        if "television" in lower_url:
+            self.sub_category = "Televisions"
+        elif "phone" in lower_url:
+            self.sub_category = "Mobile Phones"
+        elif "laptop" in lower_url:
+            self.sub_category = "Laptops"
+        elif "watches" in lower_url:
+            self.sub_category = "Watches"
+        elif "headsets" in lower_url:
+            self.sub_category = "Headphones"
+        elif "appliances" in lower_url:
+            self.sub_category = "Home Appliances"
+        else:
+            self.sub_category = "Other Electronics"
+        self.logger.info(f"🏷️  Category detected: {self.sub_category}")
+
     def start_requests(self):
         """Start with ONLY the first URL in the list"""
         if not self.urls_to_scrape:
@@ -290,6 +303,8 @@ class ShophiveSpider(scrapy.Spider):
         
         self.logger.info(f"🎯 Starting sequential scraping with {len(self.urls_to_scrape)} URLs")
         self.logger.info(f"📝 URLs to process: {self.urls_to_scrape}")
+
+        self._set_sub_category(first_url)
         
         yield scrapy.Request(
             url=first_url, 
@@ -441,9 +456,9 @@ class ShophiveSpider(scrapy.Spider):
                             price = None
 
                     # Extract category from URL
-                    parts = current_url.replace("https://www.shophive.com/", "").split("?")[0].split("/")
-                    category = parts[0].replace("-", " ").title() if parts else "Electronics"
-                    sub_category = parts[1].replace("-", " ").title() if len(parts) > 1 else "Mobile Phones"
+                    # parts = current_url.replace("https://www.shophive.com/", "").split("?")[0].split("/")
+                    # category = parts[0].replace("-", " ").title() if parts else "Electronics"
+                    # sub_category = parts[1].replace("-", " ").title() if len(parts) > 1 else "Mobile Phones"
 
                     product_data = {
                         'name': name,
@@ -451,8 +466,8 @@ class ShophiveSpider(scrapy.Spider):
                         'url': product_url,
                         'image_url': image_url,
                         'platform': "Shophive",
-                        'category': category,
-                        'sub_category': sub_category,
+                        'category': "Electronics",
+                        'sub_category': self.sub_category,
                         'source_url': current_url,
                         'timestamp': time.time()
                     }
@@ -563,6 +578,8 @@ class ShophiveSpider(scrapy.Spider):
             next_index = current_url_index + 1
             
             self.logger.info(f"🔄 Moving to next URL: {next_url} ({next_index + 1}/{len(self.urls_to_scrape)})")
+
+            self._set_sub_category(next_url)
             
             yield scrapy.Request(
                 url=next_url,
@@ -623,6 +640,27 @@ class PriceOyeSpider(scrapy.Spider):
         self.item_limit = 10000  # Total items across all URLs
         self.item_count = 0
 
+    def _set_sub_category(self, url):
+        """Set sub_category based on URL content - SAME LOGIC AS DARAZ SPIDER"""
+        lower_url = url.lower()
+        if "television" in lower_url:
+            self.sub_category = "Televisions"
+        elif "phone" in lower_url or "mobile" in lower_url:
+            self.sub_category = "Mobile Phones"
+        elif "laptop" in lower_url:
+            self.sub_category = "Laptops"
+        elif "tablets" in lower_url:
+            self.sub_category = "Tablets"
+        elif "watches" in lower_url:
+            self.sub_category = "Watches"
+        elif "headsets" in lower_url or "earbuds" in lower_url:
+            self.sub_category = "Headphones"
+        elif "appliances" in lower_url:
+            self.sub_category = "Home Appliances"
+        else:
+            self.sub_category = "Other Electronics"
+        self.logger.info(f"🏷️  Category detected: {self.sub_category}")
+
     def start_requests(self):
         """Start with ONLY the first URL in the list"""
         if not self.urls_to_scrape:
@@ -635,6 +673,8 @@ class PriceOyeSpider(scrapy.Spider):
         
         self.logger.info(f"🎯 Starting sequential scraping with {len(self.urls_to_scrape)} URLs")
         self.logger.info(f"📝 URLs to process: {self.urls_to_scrape}")
+
+        self._set_sub_category(first_url)
         
         yield scrapy.Request(
             url=first_url, 
@@ -724,11 +764,7 @@ class PriceOyeSpider(scrapy.Spider):
                     image_url = product.css('img.product-thumbnail-img::attr(src)').get()
                     if product_url and not product_url.startswith('http'):
                         product_url = response.urljoin(product_url)
-
-                    # --- Category & Sub-category Extraction ---
-                    parts = current_url.replace("https://priceoye.pk/", "").split("/")
-                    category = parts[0] if len(parts) > 0 else "Unknown"
-                    sub_category = parts[1] if len(parts) > 1 else None
+                    
 
                     yield {
                         'name': name,
@@ -737,7 +773,7 @@ class PriceOyeSpider(scrapy.Spider):
                         'image_url': image_url,
                         'platform': "PriceOye",
                         'category': "Electronics",
-                        'sub_category': sub_category,
+                        'sub_category': self.sub_category,
                         'page_number': self.current_page,
                         'source_url': current_url,
                         'timestamp': time.time()
@@ -805,6 +841,8 @@ class PriceOyeSpider(scrapy.Spider):
             next_index = current_url_index + 1
             
             self.logger.info(f"🔄 Moving to next URL: {next_url} ({next_index + 1}/{len(self.urls_to_scrape)})")
+
+            self._set_sub_category(next_url)
             
             yield scrapy.Request(
                 url=next_url,
@@ -824,4 +862,257 @@ class PriceOyeSpider(scrapy.Spider):
             self.driver.quit()
         except:
             pass
+
+
+class MegaScraper(scrapy.Spider):
+    name = "mega_category"
+    allowed_domains = ['mega.pk']
+
+    def __init__(self, urls=None, *args, **kwargs):
+        super(MegaScraper, self).__init__(*args, **kwargs)  
+
+        # Accept list or comma-separated URLs
+        if urls:
+            if isinstance(urls, str):
+                self.urls_to_scrape = [u.strip() for u in urls.split(',') if u.strip()]
+            else:
+                self.urls_to_scrape = urls
+        else:
+            print("no urls found for scraping")
+            self.urls_to_scrape = []
+
+        # Initialize Chrome only once
+        chrome_options = Options()
+        # chrome_options.add_argument("--headless=new")
+        chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+        chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument("--window-size=1680,1050")
+        chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                                    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+
+        service = Service()
+        self.driver = webdriver.Chrome(service=service, options=chrome_options)
+
+    def start_requests(self):
+        """Start with ONLY the first URL in the list"""
+        if not self.urls_to_scrape:
+            self.logger.error("No URLs provided for scraping")
+            return
+
+        # Start with first URL only
+        first_url = self.urls_to_scrape[0]
+        remaining_urls = self.urls_to_scrape[1:]
+        
+        self.logger.info(f"🎯 Starting sequential scraping with {len(self.urls_to_scrape)} URLs")
+        self.logger.info(f"📝 URLs to process: {self.urls_to_scrape}")
+        
+        # Detect category for first URL
+        self._set_sub_category(first_url)
+        
+        yield scrapy.Request(
+            url=first_url, 
+            callback=self.parse_category, 
+            meta={
+                'current_url': first_url,
+                'remaining_urls': remaining_urls,
+                'current_url_index': 0
+            }
+        )
+
+    def _set_sub_category(self, url):
+        """Set sub_category based on URL content"""
+        lower_url = url.lower()
+        if "television" in lower_url or "tv/led":
+            self.sub_category = "Televisions"
+        elif "phone" in lower_url or "mobile" in lower_url:
+            self.sub_category = "Mobile Phones"
+        elif "laptop" in lower_url:
+            self.sub_category = "Laptops"
+        elif "watches" in lower_url:
+            self.sub_category = "Watches"
+        elif "headsets" in lower_url or "headphone" or "earbuds":
+            self.sub_category = "Headphones"
+        elif "appliances" in lower_url:
+            self.sub_category = "Home Appliances"
+        elif "printer" in lower_url:
+            self.sub_category = "Printers"
+        else:
+            self.sub_category = "Other Electronics"
+        self.logger.info(f"🏷️  Category detected: {self.sub_category}")
+
+    def scroll_and_load_images(self):
+        """Scroll through the page to trigger image loading"""
+        last_height = self.driver.execute_script("return document.body.scrollHeight")
+        scroll_pause = random.uniform(0.5, 1.2)
+
+        for i in range(0, last_height, 300):
+            self.driver.execute_script(f"window.scrollTo(0, {i});")
+            time.sleep(scroll_pause)
+
+        self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        time.sleep(1.5)
+
+    def click_next_page(self):
+        """Click the 'next page' button."""
+        try:
+            # Find the pagination div and get the last <a> tag which is the next button
+            next_button = WebDriverWait(self.driver, 5).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "div.pagination a:last-child"))
+            )
+            
+            # Check if the next button is not disabled (it's an <a> tag, not a disabled span)
+            if next_button.get_attribute('href'):
+                try:
+                    next_button.click()
+                except ElementClickInterceptedException:
+                    self.driver.execute_script("arguments[0].click();", next_button)
+                
+                return True
+            else:
+                return False
+
+        except TimeoutException:
+            return False
+        except Exception as e:
+            self.logger.error(f"Error clicking next page: {e}")
+            return False
+
+    def parse_category(self, response):
+        """Scrape each category (URL) fully before moving to the next."""
+        current_url = response.meta['current_url']
+        remaining_urls = response.meta['remaining_urls']
+        current_url_index = response.meta['current_url_index']
+        
+        self.logger.info(f"🚀 Starting category {current_url_index + 1}/{len(self.urls_to_scrape)}: {current_url}")
+
+        try:
+            self.driver.get(current_url)
+            time.sleep(3)
+            page_count = 1
+            max_pages = 103
+            total_products_scraped = 0
+
+            while page_count <= max_pages:
+                self.logger.info(f"📄 Scraping page {page_count} of {current_url}")
+
+                self.scroll_and_load_images()
+                WebDriverWait(self.driver, 10).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "div.col-xs-12.col-sm-12.col-md-9"))
+                )
+
+                html = self.driver.page_source
+                page_response = HtmlResponse(url=self.driver.current_url, body=html.encode('utf-8'), encoding='utf-8')
+
+                products = page_response.css('div.col-xs-12.col-sm-12.col-md-9')
+                if not products:
+                    self.logger.info(f"❌ No products found on page {page_count} for {current_url}")
+                    break
+
+                page_products = 0
+                for product in products:
+                    try:
+                        name = product.css('.mega-product-name h3 a::text').get()
+                        price = product.css('.mega-product-price .price::text').get()
+                        product_url = product.css('.mega-product-name h3 a::attr(href)').get()
+                        image_url = product.css('.mega-product-image img::attr(src)').get() or product.css('.mega-product-image img::attr(data-src)').get()  # Fixed: added data-src
+                        
+                        # Fixed specs extraction - properly extract all spec texts
+                        specs = []
+                        spec_elements = product.css('.mega-product-specs ul li::text')
+                        for spec in spec_elements:
+                            spec_text = spec.get()
+                            if spec_text and spec_text.strip():
+                                specs.append(spec_text.strip(' -'))
+                        
+                        # Alternative: if the above doesn't work, try getting text from li directly
+                        if not specs:
+                            spec_elements_alt = product.css('.mega-product-specs ul li')
+                            for spec_li in spec_elements_alt:
+                                spec_text = spec_li.css('::text').get()
+                                if spec_text and spec_text.strip():
+                                    specs.append(spec_text.strip(' -'))
+
+                        if not product_url:
+                            continue
+
+                        item = {
+                            'name': name.strip() if name else None,
+                            'price': float(price.replace('Rs. ', '').replace(',', '')) if price else None,
+                            'url': response.urljoin(product_url),
+                            'image_url': image_url,
+                            'platform': "Mega",  # Fixed: Changed from "Daraz" to "Mega"
+                            'category': "Electronics",
+                            'sub_category': self.sub_category,
+                            'page_number': page_count,
+                            'timestamp': time.time(),
+                            'source_url': current_url,
+                            'specifications': specs  # Added specs to the item
+                        }
+
+                        yield item
+                        page_products += 1
+                        total_products_scraped += 1
+
+                    except Exception as e:
+                        self.logger.error(f"Error extracting product: {e}")
+                        continue
+
+                self.logger.info(f"✅ Page {page_count} completed: {page_products} products scraped")
+
+                # Check if there's a next page
+                if not self.click_next_page():
+                    self.logger.info(f"🎉 Category COMPLETED: {current_url} - Total: {total_products_scraped} products, {page_count} pages")
+                    break
+
+                page_count += 1
+                time.sleep(random.uniform(2, 4))
+
+            # After finishing current URL, move to next URL if any
+            if remaining_urls:
+                next_url = remaining_urls[0]
+                next_remaining = remaining_urls[1:]
+                next_index = current_url_index + 1
+                
+                self.logger.info(f"🔄 Moving to next URL: {next_url} ({next_index + 1}/{len(self.urls_to_scrape)})")
+                
+                # Detect category for next URL
+                self._set_sub_category(next_url)
+                
+                yield scrapy.Request(
+                    url=next_url,
+                    callback=self.parse_category,
+                    meta={
+                        'current_url': next_url,
+                        'remaining_urls': next_remaining,
+                        'current_url_index': next_index
+                    }
+                )
+            else:
+                self.logger.info("🎊 All URLs completed! Scraping finished.")
+
+        except Exception as e:
+            self.logger.error(f"❌ Error scraping {current_url}: {e}")
+            
+            # Even if error, try to move to next URL
+            if remaining_urls:
+                next_url = remaining_urls[0]
+                self.logger.info(f"🔄 Error occurred, moving to next URL: {next_url}")
+                
+                self._set_sub_category(next_url)
+                yield scrapy.Request(
+                    url=next_url,
+                    callback=self.parse_category,
+                    meta={
+                        'current_url': next_url,
+                        'remaining_urls': remaining_urls[1:],
+                        'current_url_index': current_url_index + 1
+                    }
+                )
+
+    def closed(self, reason):
+        try:
+            self.driver.quit()
+        except:
+            pass
+        self.logger.info("🧹 Browser closed and spider finished.")
 
