@@ -156,13 +156,14 @@ def getProductsBySearch(request):
     query = request.GET.get("query", "").strip()
     page = int(request.GET.get("page", 1))  # Default to page 1
     per_page = 20  # Number of products per page
+    sort_order = 1
 
     skip = (page - 1) * per_page
 
     # MongoDB query with pagination
     products_cursor = products_collection.find({
         "name": {"$regex": f".*{query}.*", "$options": "i"}
-    }).skip(skip).limit(per_page)
+    }).sort("price", sort_order).skip(skip).limit(per_page)
 
     products = list(products_cursor)
 
@@ -204,13 +205,14 @@ def getProductsByCategory(request):
     query = request.GET.get("query", "").strip()
     page = int(request.GET.get("page", 1))  # Default to page 1
     per_page = 20  # Number of products per page
+    sort_order = 1
 
     skip = (page - 1) * per_page
 
     # MongoDB query with pagination
     products_cursor = products_collection.find({
         "category": {"$regex": f".*{query}.*", "$options": "i"}
-    }).skip(skip).limit(per_page)
+    }).sort("price", sort_order).skip(skip).limit(per_page)
 
     products = list(products_cursor)
 
@@ -252,13 +254,14 @@ def getProductsBySubCategory(request):
     query = request.GET.get("query", "").strip()
     page = int(request.GET.get("page", 1))  # Default to page 1
     per_page = 20  # Number of products per page
+    sort_order = 1
 
     skip = (page - 1) * per_page
 
     # MongoDB query with pagination
     products_cursor = products_collection.find({
         "sub_category": {"$regex": f".*{query}.*", "$options": "i"}
-    }).skip(skip).limit(per_page)
+    }).sort("price", sort_order).skip(skip).limit(per_page)
 
     products = list(products_cursor)
 
@@ -300,13 +303,14 @@ def getProductsByPlatform(request):
     query = request.GET.get("query", "").strip()
     page = int(request.GET.get("page", 1))  # Default to page 1
     per_page = 20  # Number of products per page
+    sort_order = 1
 
     skip = (page - 1) * per_page
 
     # MongoDB query with pagination
     products_cursor = products_collection.find({
         "platform": {"$regex": f".*{query}.*", "$options": "i"}
-    }).skip(skip).limit(per_page)
+    }).sort("price", sort_order).skip(skip).limit(per_page)
 
     products = list(products_cursor)
 
