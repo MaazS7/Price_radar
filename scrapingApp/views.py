@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render
 # from django.views.decorators.csrf import csrf_exempt
 from pymongo import MongoClient
 # import subprocess
@@ -6,11 +6,12 @@ from subprocess import Popen
 from subprocess import Popen
 from datetime import datetime
 import os
-import time
 import re
 from django.http import JsonResponse, HttpResponse
 # from django.conf import settings
 from datetime import datetime, timedelta, timezone
+import requests
+from django.views.decorators.csrf import csrf_exempt
 
 
 
@@ -23,6 +24,18 @@ products_collection = Db["products"]
 
 def home_view(request):
     return render(request, "home.html")
+
+# def updateRecords(request):
+#     try:
+#         result = products_collection.update_many(
+#             {"platform": {"$regex": "^PriceOye$", "$options": "i"} and "": {"$regex": "^PriceOye$", "$options": "i"}},
+#             {"$set": {"sub_category": "Mobile Phones"}}
+#         )
+#         return HttpResponse(f"Updated successfully. Modified {result.modified_count} documents.")
+#     except Exception as e:
+#         return HttpResponse(f"Update failed: {e}", status=500)
+
+
 
 
 def search_product_view(request):
@@ -407,7 +420,30 @@ def sort_test(request):
     return JsonResponse({'products': data}, safe=False)
 
 
-
+@csrf_exempt
+def proxy_image(request):
+    image_url = request.GET.get('url')
+    if not image_url:
+        return HttpResponse(status=400)
+    
+    try:
+        # Add headers to mimic a real browser
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+        
+        response = requests.get(image_url, stream=True, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            # Add CORS headers to allow React to access the response
+            django_response = HttpResponse(response.content, content_type=response.headers['Content-Type'])
+            django_response["Access-Control-Allow-Origin"] = "*"  # Or your React domain
+            return django_response
+        else:
+            return HttpResponse(status=response.status_code)
+    except Exception as e:
+        print(f"Proxy error: {e}")  # Log errors
+        return HttpResponse(status=500)
 
 
 # from django.apps import AppConfig
