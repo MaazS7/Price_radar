@@ -37,6 +37,7 @@ urlpatterns = [
     path('getProductsByPlatform/', getProductsByPlatform, name='getProductsBySubCategory'),
     path('sort_test/', sort_test, name='sort_test'),
     path('proxy_image/', proxy_image, name='proxy_image'),
+    path('call_proxy_image/', call_proxy_image, name='call_proxy_image'),
     # path('updateRecords/', updateRecords, name='updateRecords'),
     # path('search_products/', search_products, name='search_products')
     # path('startSchedular/', startSchedular, name='startSchedular'),
