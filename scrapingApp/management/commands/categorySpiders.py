@@ -11,7 +11,7 @@ os.environ.setdefault("SCRAPY_SETTINGS_MODULE", "main_scraper.main_scraper.setti
 from scrapy.crawler import CrawlerProcess
 from django.core.management.base import BaseCommand
 from scrapy.utils.project import get_project_settings
-from main_scraper.main_scraper.spiders.category_spiders import DarazScraper, ShophiveSpider,PriceOyeSpider
+from main_scraper.main_scraper.spiders.category_spiders import DarazScraper, ShophiveSpider,PriceOyeSpider, MegaScraper
 # from price_radar.main_scraper.main_scraper.spiders.category_spiders import ShophiveSpider
 # from price_radar.main_scraper.main_scraper.spiders.category_spiders import PriceOyeSpider
 
@@ -29,7 +29,7 @@ class Command(BaseCommand):
         # Ensure Scrapy settings are loaded correctly
 
         daraz_urls=[
-            "https://www.daraz.pk/catalog/?from=hp_categories&page=20&q=Smart%20Phones&service=all_channel",
+            "https://www.daraz.pk/catalog/?spm=a2a0e.pdp_revamp.cate_5.5.6d713b7e4mSfMr&q=Smart%20Phones&from=hp_categories&src=all_channel",
             "https://www.daraz.pk/catalog/?spm=a2a0e.searchlist.cate_5.10.44e02c3f9VJbIC&q=Laptops&from=hp_categories&src=all_channel",
             "https://www.daraz.pk/catalog/?spm=a2a0e.searchlist.cate_2.9.1a2e762fRU9g5n&q=Televisions&from=hp_categories&src=all_channel",
             "https://www.daraz.pk/catalog/?spm=a2a0e.pdp_revamp.cate_5.7.137a57f6CoqmIt&q=Smart%20Watches&from=hp_categories&src=all_channel",
@@ -54,13 +54,17 @@ class Command(BaseCommand):
             "https://www.shophive.com/shop/printers",
         ]
         
+        mega_urls = [
+            "https://www.mega.pk/mobiles/"
+        ]
 
         self.stdout.write(self.style.SUCCESS(f"🚀 Running Scrapy for query:"))
 
         process = CrawlerProcess(get_project_settings())
         # process.crawl(DarazScraper, urls= daraz_urls)
         # time.sleep(20)
-        process.crawl(ShophiveSpider, urls = shophive_urls)
+        # process.crawl(ShophiveSpider, urls = shophive_urls)
+        process.crawl(MegaScraper, urls = mega_urls)
         # process.crawl(PriceOyeSpider, urls = priceOye_urls)
         process.start(stop_after_crawl=True)
 
