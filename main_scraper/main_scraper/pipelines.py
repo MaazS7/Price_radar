@@ -39,18 +39,18 @@ class MongoDBPipeline:
 
     def process_item(self, item, spider):
 
-        if spider.name == 'daraz_query' or spider.name == 'priceoye_query' or spider.name == 'shophive_query':
+        # if spider.name == 'daraz_query' or spider.name == 'priceoye_query' or spider.name == 'shophive_query':
 
-            collection = self.db["products"]
-            # existing_product = collection.find_one({"url": item["url"]})
+        #     collection = self.db["products"]
+        #     # existing_product = collection.find_one({"url": item["url"]})
 
-            now = datetime.datetime.now(datetime.timezone.utc)
+        #     now = datetime.datetime.now(datetime.timezone.utc)
 
-            item["original_price"] = item["price"]
-            item["current_price"] = item["price"]
-            item["previous_price"] = None
-            item["last_updated"] = now
-            collection.insert_one(dict(item))
+        #     item["original_price"] = item["price"]
+        #     item["current_price"] = item["price"]
+        #     item["previous_price"] = None
+        #     item["last_updated"] = now
+        #     collection.insert_one(dict(item))
             # twelve_hours_ago = now - datetime.timedelta(hours=12)
 
             # if existing_product:
@@ -81,9 +81,75 @@ class MongoDBPipeline:
                 
 
             
+            # return item
+        
+        if spider.name == 'daraz_category':
+
+            collection = self.db["products"]
+            # existing_product = collection.find_one({"url": item["url"]})
+
+            now = datetime.datetime.now(datetime.timezone.utc)
+
+            item["original_price"] = item["price"]
+            item["current_price"] = item["price"]
+            item["previous_price"] = None
+            item["last_updated"] = now
+            try:
+                collection.insert_one(dict(item))
+            except DuplicateKeyError:
+                collection.find_one_and_update(
+                    {"url": item["url"]},
+                    [
+                        {"$set": {
+                            # Determine if we should update price
+                            "update_price_condition": {
+                                "$or": [
+                                    {"$and": [{"$eq": ["$sale", False]}, {"$eq": [item["sale"], True]}]},  # Case 1
+                                    {"$and": [{"$eq": ["$sale", True]}, {"$eq": [item["sale"], False]}]},  # Case 3
+                                    {"$and": [{"$eq": ["$sale", False]}, {"$eq": [item["sale"], False]}]}  # Case 4
+                                ]
+                            },
+                            
+                            # Update sale field (always update except when both are True)
+                            "sale": {"$cond": {
+                                "if": {"$and": [{"$eq": ["$sale", True]}, {"$eq": [item["sale"], True]}]},
+                                "then": "$sale",  # Keep existing True (Case 2)
+                                "else": item["sale"]  # Update with scraper value (Cases 1,3,4)
+                            }}
+                        }},
+                        {"$set": {
+                            # Update prices based on condition
+                            "previous_price": {"$cond": {
+                                "if": "$update_price_condition",
+                                "then": {"$cond": {
+                                    "if": {"$ne": ["$current_price", item["price"]]},
+                                    "then": "$current_price",
+                                    "else": "$previous_price"
+                                }},
+                                "else": "$previous_price"
+                            }},
+                            "current_price": {"$cond": {
+                                "if": "$update_price_condition",
+                                "then": item["price"],
+                                "else": "$current_price"
+                            }},
+                            "last_updated": {"$toDate": "$$NOW"}
+                        }},
+                        {"$set": {
+                            "rating": item["rating"],
+                            "rating_count": item["rating_count"]
+                        }}
+                    ],
+                )           
+            # Skip if document already exists
+                spider.logger.debug(f"Duplicate item found: {item['url']} found and updated.")
+            except Exception as e:
+                spider.logger.error(f"Error inserting item: {e}")
+
+
             return item
         
-        elif spider.name == 'daraz_category' or spider.name == 'shophive_category' or spider.name == 'priceoye_category':
+        elif spider.name == 'shophive_category':
 
             collection = self.db["products"]
             # existing_product = collection.find_one({"url": item["url"]})
@@ -114,6 +180,71 @@ class MongoDBPipeline:
 
 
             return item
+        
+        elif spider.name == 'priceoye_category':
+
+            collection = self.db["products"]
+            # existing_product = collection.find_one({"url": item["url"]})
+
+            now = datetime.datetime.now(datetime.timezone.utc)
+
+            item["original_price"] = item["price"]
+            item["current_price"] = item["price"]
+            item["previous_price"] = None
+            item["last_updated"] = now
+            try:
+                collection.insert_one(dict(item))
+            except DuplicateKeyError:
+                collection.find_one_and_update(
+                     {"url": item["url"]},
+                        [
+                            {"$set": {
+                                "previous_price": "$current_price",
+                                "current_price": item["price"],
+                                "last_updated": {"$toDate": "$$NOW"}
+                            }}
+                        ],
+                )
+            # Skip if document already exists
+                spider.logger.debug(f"Duplicate item found: {item['url']} found and updated.")
+            except Exception as e:
+                spider.logger.error(f"Error inserting item: {e}")
+
+
+            return item
+        
+        elif spider.name == "mega_category":
+
+            collection = self.db["products"]
+            # existing_product = collection.find_one({"url": item["url"]})
+
+            now = datetime.datetime.now(datetime.timezone.utc)
+
+            item["original_price"] = item["price"]
+            item["current_price"] = item["price"]
+            item["previous_price"] = None
+            item["last_updated"] = now
+            try:
+                collection.insert_one(dict(item))
+            except DuplicateKeyError:
+                collection.find_one_and_update(
+                     {"url": item["url"]},
+                        [
+                            {"$set": {
+                                "previous_price": "$current_price",
+                                "current_price": item["price"],
+                                "last_updated": {"$toDate": "$$NOW"}
+                            }}
+                        ],
+                )
+            # Skip if document already exists
+                spider.logger.debug(f"Duplicate item found: {item['url']} found and updated.")
+            except Exception as e:
+                spider.logger.error(f"Error inserting item: {e}")
+
+
+            return item
+
         
         elif spider.name == 'daraz_single_product':
 
