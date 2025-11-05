@@ -77,7 +77,7 @@ class DarazScraper(scrapy.Spider):
             self.sub_category = "Laptops"
         elif "watches" in lower_url:
             self.sub_category = "Watches"
-        elif "headsets" in lower_url:
+        elif "headsets" in lower_url or "headphone" in lower_url or "earbuds" in lower_url:
             self.sub_category = "Headphones"
         elif "appliances" in lower_url:
             self.sub_category = "Home Appliances"
@@ -157,7 +157,13 @@ class DarazScraper(scrapy.Spider):
                         name = product.css('div.RfADt a::text').get()
                         price = product.css('span.ooOxS::text').get()
                         product_url = product.css('a::attr(href)').get()
+                        is_on_sale = bool(product.css('i.ic-dynamic-badge').get())
                         image_url = product.css('img::attr(src)').get() or product.css('img::attr(data-src)').get()
+
+                        rating_stars = product.css('div.mdmmT i._9-ogB.Dy1nx')  # Count filled stars
+                        total_stars = len(rating_stars)  # This gives you the number of filled stars
+
+                        rating_count = product.css('span.qzqFw::text').get()  # Returns "(526)"
 
                         if not product_url:
                             continue
@@ -172,7 +178,10 @@ class DarazScraper(scrapy.Spider):
                             'sub_category': self.sub_category,
                             'page_number': page_count,
                             'timestamp': time.time(),
-                            'source_url': current_url
+                            'source_url': current_url,
+                            'sale': is_on_sale,
+                            'rating': total_stars,
+                            'rating_count': rating_count
                         }
 
                         yield item
@@ -283,7 +292,7 @@ class ShophiveSpider(scrapy.Spider):
             self.sub_category = "Laptops"
         elif "watches" in lower_url:
             self.sub_category = "Watches"
-        elif "headsets" in lower_url:
+        elif "headsets" in lower_url or "headphone" in lower_url or "earbuds" in lower_url:
             self.sub_category = "Headphones"
         elif "appliances" in lower_url:
             self.sub_category = "Home Appliances"
@@ -653,7 +662,7 @@ class PriceOyeSpider(scrapy.Spider):
             self.sub_category = "Tablets"
         elif "watches" in lower_url:
             self.sub_category = "Watches"
-        elif "headsets" in lower_url or "earbuds" in lower_url:
+        elif "headsets" in lower_url or "headphone" in lower_url or "earbuds" in lower_url:
             self.sub_category = "Headphones"
         elif "appliances" in lower_url:
             self.sub_category = "Home Appliances"
@@ -930,7 +939,7 @@ class MegaScraper(scrapy.Spider):
             self.sub_category = "Laptops"
         elif "watches" in lower_url:
             self.sub_category = "Watches"
-        elif "headsets" in lower_url or "headphone" or "earbuds":
+        elif "headsets" in lower_url or "headphone" in lower_url or "earbuds" in lower_url:
             self.sub_category = "Headphones"
         elif "appliances" in lower_url:
             self.sub_category = "Home Appliances"
