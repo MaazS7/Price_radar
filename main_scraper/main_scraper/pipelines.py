@@ -8,8 +8,9 @@
 # from itemadapter import ItemAdapter
 import pymongo
 # from scrapy.exceptions import DropItem
-import datetime
+from datetime import datetime, timezone
 from pymongo.errors import DuplicateKeyError
+
 
 
 
@@ -115,6 +116,19 @@ class MongoDBPipeline:
                                 "if": {"$and": [{"$eq": ["$sale", True]}, {"$eq": [item["sale"], True]}]},
                                 "then": "$sale",  # Keep existing True (Case 2)
                                 "else": item["sale"]  # Update with scraper value (Cases 1,3,4)
+                            }},
+
+                            "last_price_date": {"$cond": {
+                                "if": {"$and": [{"$eq": ["$sale", True]}, {"$eq": [item["sale"], True]}]},
+                                "then": "$last_price_date",  # Keep existing (Case 2 - no change)
+                                "else": "$last_updated"  # Move last_updated to last_price_date (Cases 1,3,4)
+                            }},
+                            
+                            # Handle last_updated: always set to current datetime when sale changes
+                            "last_updated": {"$cond": {
+                                "if": {"$and": [{"$eq": ["$sale", True]}, {"$eq": [item["sale"], True]}]},
+                                "then": "$last_updated",  # Keep existing (Case 2 - no change)
+                                "else": datetime.now(timezone.utc)  # Set new timestamp (Cases 1,3,4)
                             }}
                         }},
                         {"$set": {
@@ -132,8 +146,7 @@ class MongoDBPipeline:
                                 "if": "$update_price_condition",
                                 "then": item["price"],
                                 "else": "$current_price"
-                            }},
-                            "last_updated": {"$toDate": "$$NOW"}
+                            }}
                         }},
                         {"$set": {
                             "rating": item["rating"],
