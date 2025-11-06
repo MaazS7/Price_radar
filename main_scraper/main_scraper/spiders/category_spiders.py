@@ -1012,50 +1012,56 @@ class MegaScraper(scrapy.Spider):
                 html = self.driver.page_source
                 page_response = HtmlResponse(url=self.driver.current_url, body=html.encode('utf-8'), encoding='utf-8')
 
-                products = page_response.css('div.col-xs-12.col-sm-12.col-md-9')
+                # Get all product boxes
+                products = page_response.css('div.mega-product-box')
+
                 if not products:
                     self.logger.info(f"❌ No products found on page {page_count} for {current_url}")
                     break
 
+                self.logger.info(f"Found {len(products)} products on page {page_count}")
+
                 page_products = 0
                 for product in products:
                     try:
-                        name = product.css('.mega-product-name h3 a::text').get()
+                        # Fixed selectors based on actual HTML structure
+                        name = product.css('h3.mega-product-name a::text').get()
                         price = product.css('.mega-product-price .price::text').get()
-                        product_url = product.css('.mega-product-name h3 a::attr(href)').get()
-                        image_url = product.css('.mega-product-image img::attr(src)').get() or product.css('.mega-product-image img::attr(data-src)').get()  # Fixed: added data-src
+                        product_url = product.css('h3.mega-product-name a::attr(href)').get()
+                        image_url = product.css('img.mega-product-image::attr(src)').get()
                         
-                        # Fixed specs extraction - properly extract all spec texts
+                        # Get specs if they exist
                         specs = []
                         spec_elements = product.css('.mega-product-specs ul li::text')
                         for spec in spec_elements:
                             spec_text = spec.get()
                             if spec_text and spec_text.strip():
                                 specs.append(spec_text.strip(' -'))
-                        
-                        # Alternative: if the above doesn't work, try getting text from li directly
-                        if not specs:
-                            spec_elements_alt = product.css('.mega-product-specs ul li')
-                            for spec_li in spec_elements_alt:
-                                spec_text = spec_li.css('::text').get()
-                                if spec_text and spec_text.strip():
-                                    specs.append(spec_text.strip(' -'))
 
-                        if not product_url:
+                        if not product_url or not name:
+                            self.logger.warning(f"Skipping product - missing URL or name")
                             continue
 
+                        # Clean price
+                        price_value = None
+                        if price:
+                            try:
+                                price_value = float(price.replace('Rs. ', '').replace(',', '').strip())
+                            except (ValueError, AttributeError) as e:
+                                self.logger.warning(f"Could not parse price: {price} - {e}")
+
                         item = {
-                            'name': name.strip() if name else None,
-                            'price': float(price.replace('Rs. ', '').replace(',', '')) if price else None,
+                            'name': name.strip(),
+                            'price': price_value,
                             'url': response.urljoin(product_url),
                             'image_url': image_url,
-                            'platform': "Mega",  # Fixed: Changed from "Daraz" to "Mega"
+                            'platform': "Mega",
                             'category': "Electronics",
                             'sub_category': self.sub_category,
                             'page_number': page_count,
                             'timestamp': time.time(),
                             'source_url': current_url,
-                            'specifications': specs  # Added specs to the item
+                            'specifications': specs
                         }
 
                         yield item
