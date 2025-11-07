@@ -55,7 +55,11 @@ class Command(BaseCommand):
         ]
         
         mega_urls = [
-            "https://www.mega.pk/mobiles/"
+            "https://www.mega.pk/mobiles/",
+            "https://www.mega.pk/laptops/",
+            "https://www.mega.pk/watches/",
+            "https://www.mega.pk/ledtv/",
+            "https://www.mega.pk/printer/",
         ]
 
         self.stdout.write(self.style.SUCCESS(f"🚀 Running Scrapy for query:"))
