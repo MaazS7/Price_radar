@@ -12,6 +12,17 @@ from django.http import JsonResponse, HttpResponse
 from datetime import datetime, timedelta, timezone
 import requests
 from django.views.decorators.csrf import csrf_exempt
+from urllib.parse import urlparse
+
+
+
+import json
+from django.views.decorators.http import require_http_methods
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
 
 
 
@@ -150,6 +161,88 @@ def search_products(request, query):
     
 
     # return redirect("loading_view")
+
+
+@csrf_exempt
+def proxy_image(request):
+    image_url = request.GET.get('url')
+    if not image_url:
+        return HttpResponse("Missing URL parameter", status=400)
+    
+    try:
+        # Parse the image URL to determine the source
+        parsed_url = urlparse(image_url)
+        domain = parsed_url.netloc.lower()
+        
+        # Set appropriate referer based on the image source
+        if 'priceoye' in domain:
+            referer = 'https://priceoye.pk/'
+        elif 'shophive' in domain:
+            referer = 'https://shophive.com/'
+        elif 'daraz' in domain:
+            referer = 'https://www.daraz.pk/'
+        else:
+            # Generic referer for other sources
+            referer = parsed_url.scheme + '://' + parsed_url.netloc + '/'
+        
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'image/webp,image/apng,image/avif,image/svg+xml,image/,/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Referer': referer,
+            'Sec-Fetch-Dest': 'image',
+            'Sec-Fetch-Mode': 'no-cors',
+            'Sec-Fetch-Site': 'cross-site',
+            'DNT': '1',
+        }
+        
+        response = requests.get(
+            image_url, 
+            stream=True, 
+            headers=headers, 
+            timeout=10,
+            allow_redirects=True,
+            verify=True
+        )
+        
+        if response.status_code == 200:
+            content_type = response.headers.get('Content-Type', 'image/webp')
+            django_response = HttpResponse(response.content, content_type=content_type)
+            
+            # Add comprehensive CORS headers
+            django_response["Access-Control-Allow-Origin"] = "*"
+            django_response["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+            django_response["Access-Control-Allow-Headers"] = "Content-Type"
+            django_response["Cache-Control"] = "public, max-age=3600"  # Cache for 1 hour
+            django_response["Vary"] = "Origin"
+            
+            return django_response
+        else:
+            print(f"Failed to fetch image from {domain}: {response.status_code}")
+            return HttpResponse(f"Failed to fetch image: {response.status_code}", status=response.status_code)
+            
+    except requests.exceptions.Timeout:
+        print(f"Timeout fetching image: {image_url}")
+        return HttpResponse("Request timeout", status=504)
+    except requests.exceptions.SSLError as e:
+        print(f"SSL error fetching image: {e}")
+        return HttpResponse("SSL error", status=502)
+    except requests.exceptions.RequestException as e:
+        print(f"Proxy error: {e}")
+        return HttpResponse(f"Error: {str(e)}", status=500)
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return HttpResponse("Internal server error", status=500)
+    
+def call_proxy_image(image_url):
+    """Call proxy_image function and return the proxied URL"""
+    if not image_url:
+        return None
+    
+    # Return the proxy URL that React can use
+    return f"http://localhost:8000/proxy_image/?url={image_url}"
+    
 
 
 def getProductsBySearch(request):
@@ -323,7 +416,7 @@ def getProductsByPlatform(request):
                 'previous_price': prod.get("previous_price"),
                 'category': prod.get("category"),
                 'url': prod.get("url"),
-                'image_url': prod.get("image_url"),
+                'image_url': call_proxy_image(prod.get("image_url")),
                 'platform': prod.get("platform")
             }
             for prod in products
@@ -425,30 +518,128 @@ def sort_test(request):
 
 
 @csrf_exempt
-def proxy_image(request):
-    image_url = request.GET.get('url')
-    if not image_url:
-        return HttpResponse(status=400)
+@require_http_methods(["POST"])
+def signUp(request):
+
+    try:
+        data = json.loads(request.body)
+
+        Username = data.get('username', '').strip()
+        Email = data.get('email', '').strip()
+        password = data.get('password', '').strip()
+        password2 = data.get('password2', ''). strip()
+
+        if not (Username and Email and password and password2):
+            return JsonResponse({'error': 'Please Fill out all the the fields.'}, status = 400)
+        
+        if password != password2:
+            return JsonResponse({'error': 'Password is not matching with confirm password.'}, status= 400)
+        
+        if len(password) < 8:
+            return JsonResponse({'error': 'Password length must not be shorter than 8 characters.'}, status= 400)
+        
+        try:
+            validate_email(Email)
+        except ValidationError:
+            return JsonResponse({'error': 'Invalid email format'}, status=400)
+        
+
+        if User.objects.filter(username = Username):
+            return JsonResponse({'error': 'User already exists.'}, status= 400)
+        
+        if User.objects.filter(email = Email):
+            return JsonResponse({'error': 'User with this email already exists.'}, status= 400)
+        
+        user = User.objects.create_user(
+            username = Username,
+            password = password,
+            email = Email
+        )
+
+        login(request, user)
+
+        return JsonResponse({
+            'message': 'User created successfully',
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+            }
+        }, status=201)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+    
+@csrf_exempt
+@require_http_methods(["POST"])
+def login(request):
+
+    try:
+
+        data = json.loads(request.body)
+
+        Username = data.get('username', '').strip()
+        Email = data.get('email', '').strip()
+        password = data.get('password', '')
+
+
+        if not (Username and Email):
+            return JsonResponse({'error': 'Please provide Username or Email for login.'}, status = 400)
+
+        if not password:
+            return JsonResponse({'error': 'Please enter password.'}, status = 400)
+
+
+        user = authenticate(request, username = Username, password = password)
+
+
+        if user is not None:
+            login(request, user)
+            return JsonResponse({
+                'message': 'Login successful',
+                'user': {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                }
+            }, status=200)
+        else:
+            return JsonResponse({'error': 'Invalid username or password'}, status=401)
+
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+    
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@login_required
+def logout_view(request):
     
     try:
-        # Add headers to mimic a real browser
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
-        
-        response = requests.get(image_url, stream=True, headers=headers, timeout=10)
-        
-        if response.status_code == 200:
-            # Add CORS headers to allow React to access the response
-            django_response = HttpResponse(response.content, content_type=response.headers['Content-Type'])
-            django_response["Access-Control-Allow-Origin"] = "*"  # Or your React domain
-            return django_response
-        else:
-            return HttpResponse(status=response.status_code)
+        logout(request)
+        return JsonResponse({'message': 'Logout successful'}, status=200)
     except Exception as e:
-        print(f"Proxy error: {e}")  # Log errors
-        return HttpResponse(status=500)
+        return JsonResponse({'error': str(e)}, status=500)
 
+
+@csrf_exempt
+@require_http_methods(["DELETE"])
+@login_required
+def delete_account_view(request):
+
+    try:
+        user = request.user
+        user.delete()
+        return JsonResponse({'message': 'Account deleted successfully'}, status=200)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 # from django.apps import AppConfig
 # from apscheduler.schedulers.background import BackgroundScheduler
