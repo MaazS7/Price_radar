@@ -627,6 +627,25 @@ def logout_view(request):
         return JsonResponse({'message': 'Logout successful'}, status=200)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+    
+
+@require_http_methods(["GET"])
+@login_required
+def profile_view(request):
+    
+    try:
+        user = request.user
+        return JsonResponse({
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'date_joined': user.date_joined.strftime('%Y-%m-%d %H:%M:%S'),
+                'last_login': user.last_login.strftime('%Y-%m-%d %H:%M:%S') if user.last_login else None,
+            }
+        }, status=200)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 @csrf_exempt
