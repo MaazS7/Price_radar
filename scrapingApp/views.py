@@ -181,6 +181,8 @@ def proxy_image(request):
             referer = 'https://shophive.com/'
         elif 'daraz' in domain:
             referer = 'https://www.daraz.pk/'
+        elif 'mega.pk' in domain:
+            referer = 'https://www.mega.pk/'
         else:
             # Generic referer for other sources
             referer = parsed_url.scheme + '://' + parsed_url.netloc + '/'
@@ -270,7 +272,9 @@ def getProductsBySearch(request):
                 'category': prod.get("category"),
                 'url': prod.get("url"),
                 'image_url': prod.get("image_url"),
-                'platform': prod.get("platform")
+                'platform': prod.get("platform"),
+                'rating_stars': prod.get("rating"),
+                'reviews_count': prod.get("rating_count")
             }
             for prod in products
         ]
@@ -319,7 +323,9 @@ def getProductsByCategory(request):
                 'category': prod.get("category"),
                 'url': prod.get("url"),
                 'image_url': prod.get("image_url"),
-                'platform': prod.get("platform")
+                'platform': prod.get("platform"),
+                'rating_stars': prod.get("rating"),
+                'reviews_count': prod.get("rating_count")
             }
             for prod in products
         ]
@@ -368,7 +374,9 @@ def getProductsBySubCategory(request):
                 'category': prod.get("category"),
                 'url': prod.get("url"),
                 'image_url': prod.get("image_url"),
-                'platform': prod.get("platform")
+                'platform': prod.get("platform"),
+                'rating_stars': prod.get("rating"),
+                'reviews_count': prod.get("rating_count")
             }
             for prod in products
         ]
@@ -417,7 +425,9 @@ def getProductsByPlatform(request):
                 'category': prod.get("category"),
                 'url': prod.get("url"),
                 'image_url': call_proxy_image(prod.get("image_url")),
-                'platform': prod.get("platform")
+                'platform': prod.get("platform"),
+                'rating_stars': prod.get("rating"),
+                'reviews_count': prod.get("rating_count")
             }
             for prod in products
         ]

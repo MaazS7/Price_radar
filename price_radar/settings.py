@@ -30,8 +30,6 @@ SECRET_KEY = 'django-insecure-f)($3zq1gwf##=%jqjg$b4@xz##1md1=cs5e)hk4qmhpmu4u-z
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
 
 # Application definition
 
@@ -151,5 +149,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 client = MongoClient("mongodb+srv://priceradarpk:priceradar@priceradar.b6bkx.mongodb.net/?retryWrites=true&w=majority&appName=PriceRadar")
 db = client["priceradar"]
 products_collection = db["products"]
+
+
+LOGIN_URL = '/login/'
 
 
