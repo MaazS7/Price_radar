@@ -935,7 +935,7 @@ class MegaScraper(scrapy.Spider):
         lower_url = url.lower()
         if "television" in lower_url or "tv/led":
             self.sub_category = "Televisions"
-        elif "phone" in lower_url or "mobile" in lower_url:
+        elif "phone" in lower_url or "mobiles" in lower_url:
             self.sub_category = "Mobile Phones"
         elif "laptop" in lower_url:
             self.sub_category = "Laptops"
@@ -1008,14 +1008,14 @@ class MegaScraper(scrapy.Spider):
 
                 self.scroll_and_load_images()
                 WebDriverWait(self.driver, 10).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, "div.product-grid-div"))
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "div.cat-div.col-md-12"))
                 )
 
                 html = self.driver.page_source
                 page_response = HtmlResponse(url=self.driver.current_url, body=html.encode('utf-8'), encoding='utf-8')
 
                 # Get all product boxes
-                products = page_response.css('div.mega-product-box')
+                products = page_response.css('li.col-xs-6.col-sm-4.col-md-4.col-lg-3')
 
                 if not products:
                     self.logger.info(f"❌ No products found on page {page_count} for {current_url}")
@@ -1027,14 +1027,17 @@ class MegaScraper(scrapy.Spider):
                 for product in products:
                     try:
                         # Fixed selectors based on actual HTML structure
-                        name = product.css('h3.mega-product-name a::text').get()
-                        price = product.css('.mega-product-price .price::text').get()
-                        product_url = product.css('h3.mega-product-name a::attr(href)').get()
-                        image_url = product.css('img.mega-product-image::attr(src)').get()
+                        name = product.css('#lap_name_div h3 a::text').get()
+                        price = product.css('div.cat_price::text').getall()
+                        if price:
+                            # Filter out whitespace and get the actual price (not the .was price)
+                            price = [p.strip() for p in price if p.strip()][-1]
+                        product_url = product.css('#lap_name_div h3 a::attr(href)').get()
+                        image_url = product.css('.image .wrapper1 img::attr(src)').get()
                         
                         # Get specs if they exist
                         specs = []
-                        spec_elements = product.css('.mega-product-specs ul li::text')
+                        spec_elements = product.css('.detailer li::text')
                         for spec in spec_elements:
                             spec_text = spec.get()
                             if spec_text and spec_text.strip():
