@@ -416,7 +416,7 @@ def getProductsByPlatform(request):
                 'previous_price': prod.get("previous_price"),
                 'category': prod.get("category"),
                 'url': prod.get("url"),
-                'image_url': call_proxy_image(prod.get("image_url")),
+                'image_url': prod.get("image_url"),
                 'platform': prod.get("platform")
             }
             for prod in products
@@ -614,6 +614,112 @@ def login(request):
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["DELETE"])
+def delete_record(request):
+    
+    try:
+        # Get URL from query parameter
+        url = request.GET.get('url')
+        
+        
+        # Validate URL parameter
+        if not url:
+            return JsonResponse({
+                'success': False,
+                'error': 'URL parameter is required'
+            }, status=400)
+        
+        # Delete the record from MongoDB
+        result = products_collection.delete_one({'url': url})
+        
+        # Check if a record was deleted
+        if result.deleted_count > 0:
+            return JsonResponse({
+                'success': True,
+                'message': 'Record deleted successfully',
+                'deleted_count': result.deleted_count
+            }, status=200)
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': 'No record found with the provided URL'
+            }, status=404)
+    
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+    
+
+@csrf_exempt
+@require_http_methods(["DELETE", "POST"])
+def delete_multiple_records(request):
+    
+    try:
+        # Parse request body
+        if not request.body:
+            return JsonResponse({
+                'success': False,
+                'error': 'Request body is required'
+            }, status=400)
+        
+        body = json.loads(request.body)
+        urls = body.get('urls')
+        
+        # Validate URLs parameter
+        if not urls:
+            return JsonResponse({
+                'success': False,
+                'error': 'urls parameter is required'
+            }, status=400)
+        
+        # Check if urls is a list
+        if not isinstance(urls, list):
+            return JsonResponse({
+                'success': False,
+                'error': 'urls must be an array/list'
+            }, status=400)
+        
+        # Check if list is empty
+        if len(urls) == 0:
+            return JsonResponse({
+                'success': False,
+                'error': 'urls list cannot be empty'
+            }, status=400)
+        
+        # Delete multiple records using $in operator
+        result = products_collection.delete_many({'url': {'$in': urls}})
+        
+        # Check results
+        if result.deleted_count > 0:
+            return JsonResponse({
+                'success': True,
+                'message': f'{result.deleted_count} record(s) deleted successfully',
+                'deleted_count': result.deleted_count,
+                'requested_count': len(urls)
+            }, status=200)
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': 'No records found with the provided URLs',
+                'deleted_count': 0,
+                'requested_count': len(urls)
+            }, status=404)
+    
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON in request body'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
     
 
 
@@ -659,6 +765,19 @@ def delete_account_view(request):
         return JsonResponse({'message': 'Account deleted successfully'}, status=200)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+from django.core.management import call_command
+def run_Spiders(request):
+
+    try:
+        call_command('categorySpiders')
+        return JsonResponse({'status' : 'success', 'message': 'Command for Spider run successfully'})
+    except Exception as e:
+        return JsonResponse({'status' : 'failed', 'message': str(e)}, status=500)
+
+
+
+
 
 # from django.apps import AppConfig
 # from apscheduler.schedulers.background import BackgroundScheduler

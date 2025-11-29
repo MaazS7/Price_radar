@@ -41,7 +41,8 @@ class Command(BaseCommand):
             "https://priceoye.pk/smart-watches/pricelist?brands=faster_sveston_zero_assorted_dany_samsung_yolo_airox",
             "https://priceoye.pk/mobiles/pricelist?brands=samsung_infinix_oppo_xiaomi_vivo_tecno_realme_itel_apple_asus_blackberry_dcode_digit_google_honor_htc_huawei_lenovo_nokia_nothing_oneplus_qmobile_sego_sony_vgo-tel_motorola",
             "https://priceoye.pk/tablets/pricelist?sort=price_asc",
-            "https://priceoye.pk/wireless-earbuds/pricelist?sort=price_asc"
+            "https://priceoye.pk/wireless-earbuds/pricelist?sort=price_asc",
+            "https;//priceoye.pk/sale"
         ]
 
         shophive_urls = [

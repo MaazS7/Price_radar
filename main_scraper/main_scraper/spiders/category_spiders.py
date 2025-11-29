@@ -282,17 +282,17 @@ class ShophiveSpider(scrapy.Spider):
         self.max_items = 10000
 
     def _set_sub_category(self, url):
-        """Set sub_category based on URL content - SAME LOGIC AS DARAZ SPIDER"""
+        
         lower_url = url.lower()
-        if "television" in lower_url:
+        if "television" in lower_url or "tv/led" in lower_url:
             self.sub_category = "Televisions"
-        elif "phone" in lower_url:
+        elif "phone" in lower_url or "mobile" in lower_url:
             self.sub_category = "Mobile Phones"
         elif "laptop" in lower_url:
             self.sub_category = "Laptops"
-        elif "watches" in lower_url:
+        elif "watches" in lower_url or "watch" in lower_url:
             self.sub_category = "Watches"
-        elif "headsets" in lower_url or "headphone" in lower_url or "earbuds" in lower_url:
+        elif "headsets" in lower_url or "headphone" in lower_url or "earbuds" in lower_url or "airpod" in lower_url:
             self.sub_category = "Headphones"
         elif "appliances" in lower_url:
             self.sub_category = "Home Appliances"
@@ -771,6 +771,7 @@ class PriceOyeSpider(scrapy.Spider):
                     # --- Product URL + Image ---
                     product_url = product.css('a.ga-dataset::attr(href)').get()
                     image_url = product.css('img.product-thumbnail-img::attr(src)').get()
+                    on_sale = bool(product.css('i.ic-dynamic-badge img').get())
                     if product_url and not product_url.startswith('http'):
                         product_url = response.urljoin(product_url)
                     
@@ -785,7 +786,8 @@ class PriceOyeSpider(scrapy.Spider):
                         'sub_category': self.sub_category,
                         'page_number': self.current_page,
                         'source_url': current_url,
-                        'timestamp': time.time()
+                        'timestamp': time.time(),
+                        'sale': on_sale
                     }
 
                     self.item_count += 1
@@ -1006,7 +1008,7 @@ class MegaScraper(scrapy.Spider):
 
                 self.scroll_and_load_images()
                 WebDriverWait(self.driver, 10).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, "div.col-xs-12.col-sm-12.col-md-9"))
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "div.product-grid-div"))
                 )
 
                 html = self.driver.page_source
