@@ -1,6 +1,10 @@
 import os
 import sys
 from pathlib import Path
+import multiprocessing
+import time
+# from twisted.internet import reactor, defer
+# from scrapy.crawler import CrawlerRunner
 
 # Add the project root to the Python path
 BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
@@ -15,6 +19,12 @@ from main_scraper.main_scraper.spiders.category_spiders import DarazScraper, Sho
 # from price_radar.main_scraper.main_scraper.spiders.category_spiders import ShophiveSpider
 # from price_radar.main_scraper.main_scraper.spiders.category_spiders import PriceOyeSpider
 
+# def run_spider_process(spider_class, urls):
+#         """Function to run in separate process"""
+#         process = CrawlerProcess(get_project_settings())
+#         process.crawl(spider_class, urls=urls)
+#         process.start(stop_after_crawl=True)
+
 
 class Command(BaseCommand):
     help = 'Run Scrapy spiders'
@@ -22,6 +32,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         # parser.add_argument('query', type=str, help='Query to pass to spiders')
         pass
+    
 
     def handle(self, *args, **kwargs):
         # query = kwargs['query']
@@ -63,14 +74,48 @@ class Command(BaseCommand):
             "https://www.mega.pk/printer/",
         ]
 
-        self.stdout.write(self.style.SUCCESS(f"🚀 Running Scrapy for query:"))
+        # spiders = [
+        #     # (DarazScraper, daraz_urls),
+        #     (PriceOyeSpider, priceOye_urls),
+        #     (ShophiveSpider, shophive_urls),
+        #     # (MegaScraper, mega_urls)
+        # ]
+
+        self.stdout.write(self.style.SUCCESS(f"🚀 Running Scraper"))
 
         process = CrawlerProcess(get_project_settings())
-        # process.crawl(DarazScraper, urls= daraz_urls)
-        # time.sleep(20)
-        # process.crawl(ShophiveSpider, urls = shophive_urls)
+        process.crawl(DarazScraper, urls= daraz_urls)
+        time.sleep(9000)
+        process.crawl(ShophiveSpider, urls = shophive_urls)
+        time.sleep(7200)
+        process.crawl(PriceOyeSpider, urls = priceOye_urls)
+        time.sleep(3600)
         process.crawl(MegaScraper, urls = mega_urls)
-        # process.crawl(PriceOyeSpider, urls = priceOye_urls)
         process.start(stop_after_crawl=True)
 
-        self.stdout.write(self.style.SUCCESS(f"✅ Scrapy completed for query:"))
+        self.stdout.write(self.style.SUCCESS(f"✅ Scraping completed"))
+
+
+        # for spider_class, urls in spiders:
+        #     print(f"\n🚀 Starting {spider_class.__name__}...")
+            
+        #     # Create and start process
+        #     p = multiprocessing.Process(
+        #         target=run_spider_process,
+        #         args=(spider_class, urls)
+        #     )
+        #     p.daemon = True
+        #     p.start()
+        #     timeout1 = 7200 if spider_class is DarazScraper else 3600
+
+        #     p.join(timeout= timeout1)
+
+        #     if p.is_alive():
+        #         p.terminate()
+        #         p.join(timeout=20)
+            
+        #     print(f"✅ {spider_class.__name__} completed")
+            
+        #     time.sleep(5)
+
+        # print("\n🎊 All spiders completed!")

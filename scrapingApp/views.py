@@ -49,7 +49,7 @@ def home_view(request):
 
 
 
-def search_product_view(request):
+# def search_product_view(request):
     print("🔎 Search product function started")
 
     query = request.GET.get("query", "").strip()
@@ -143,7 +143,7 @@ def search_product_view(request):
                 "message": str(e)
             })
         
-def search_products(request, query):
+# def search_products(request, query):
     query_words = request.GET.get("query", "").strip()
     
     if not query_words:
@@ -274,7 +274,8 @@ def getProductsBySearch(request):
                 'image_url': prod.get("image_url"),
                 'platform': prod.get("platform"),
                 'rating_stars': prod.get("rating"),
-                'reviews_count': prod.get("rating_count")
+                'reviews_count': prod.get("rating_count"),
+                'sale': prod.get("sale")
             }
             for prod in products
         ]
@@ -325,7 +326,8 @@ def getProductsByCategory(request):
                 'image_url': prod.get("image_url"),
                 'platform': prod.get("platform"),
                 'rating_stars': prod.get("rating"),
-                'reviews_count': prod.get("rating_count")
+                'reviews_count': prod.get("rating_count"),
+                'sale': prod.get("sale")
             }
             for prod in products
         ]
@@ -375,6 +377,7 @@ def getProductsBySubCategory(request):
                 'url': prod.get("url"),
                 'image_url': prod.get("image_url"),
                 'platform': prod.get("platform"),
+                'sale': prod.get("sale"),
                 'rating_stars': prod.get("rating"),
                 'reviews_count': prod.get("rating_count")
             }
@@ -425,7 +428,8 @@ def getProductsByPlatform(request):
                 'category': prod.get("category"),
                 'url': prod.get("url"),
                 'image_url': prod.get("image_url"),
-                'platform': prod.get("platform")
+                'platform': prod.get("platform"),
+                'sale': prod.get("sale")
             }
             for prod in products
         ]
