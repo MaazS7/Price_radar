@@ -88,7 +88,7 @@ DATABASES = {
         'NAME': "priceradar",
         'ENFORCE_SCHEMA': False,
         'CLIENT' :{
-            'host':'mongodb+srv://priceradarpk:priceradar@priceradar.b6bkx.mongodb.net/?retryWrites=true&w=majority&appName=PriceRadar',
+            'host':'',
             'authSource': 'admin',
             'authMechanism': 'SCRAM-SHA-1',
         }
@@ -138,7 +138,7 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-client = MongoClient("mongodb+srv://priceradarpk:priceradar@priceradar.b6bkx.mongodb.net/?retryWrites=true&w=majority&appName=PriceRadar")
+client = MongoClient("")
 db = client["priceradar"]
 products_collection = db["products"]
 
