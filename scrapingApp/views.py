@@ -15,7 +15,7 @@ from datetime import datetime, timedelta, timezone
 
 
 # Connect to MongoDB Atlas
-Client = MongoClient("mongodb+srv://priceradarpk:priceradar@priceradar.b6bkx.mongodb.net/?retryWrites=true&w=majority&appName=PriceRadar")
+Client = MongoClient("")
 Db = Client["priceradar"]
 products_collection = Db["products"]
 
