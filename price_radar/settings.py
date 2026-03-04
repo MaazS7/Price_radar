@@ -96,7 +96,7 @@ DATABASES = {
         'NAME': "priceradar",
         'ENFORCE_SCHEMA': False,
         'CLIENT' :{
-            'host':'mongodb+srv://priceradarpk:priceradar@priceradar.b6bkx.mongodb.net/?retryWrites=true&w=majority&appName=PriceRadar',
+            'host':'',
             'authSource': 'admin',
             'authMechanism': 'SCRAM-SHA-1',
         }
