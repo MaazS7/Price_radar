@@ -68,22 +68,14 @@ Multiple E-Commerce Sites → Scrapy Spiders → MongoDB Atlas → Streamlit Das
 Prerequisites
 Python 3.9+
 
-MongoDB Atlas account
-
-Docker (optional)
-
 Local Setup
 bash
 # Clone the repository
-git clone https://github.com/yourusername/ecommerce-price-tracker.git
-cd ecommerce-price-tracker
+git clone https://github.com/maazS7/Price_radar.git
+cd Price_radar
 
 # Install dependencies
 pip install -r requirements.txt
-
-# Configure environment variables
-cp .env.example .env
-# Edit .env with your MongoDB credentials and platform-specific configurations
 
 # Run the scraper for a specific platform
 scrapy crawl daraz_spider 
@@ -247,13 +239,12 @@ Maaz Shahzad
 🙏 Acknowledgments
 Scrapy for the powerful scraping framework
 
-Streamlit for the amazing dashboard capabilities
-
 MongoDB for reliable cloud data storage
 
 All open-source contributors who made this possible
 
 
+
 🌟 If you find this project useful, please consider giving it a star!
 
-Made with ❤️ for the global e-commerce community
+# Made with ❤️ for the global e-commerce community
